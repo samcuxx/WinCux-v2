@@ -1,0 +1,901 @@
+{
+    "categories": [
+        "All",
+        "Nature",
+        "Abstract",
+        "City",
+        "Space",
+        "Minimalist",
+        "Dark",
+        "Gaming",
+        "Gradient",
+        "Anime",
+        "Retro"
+    ],
+    "wallpapers": [
+        {
+            "id": 1,
+            "title": "Mountain Vista",
+            "description": "Breathtaking mountain landscape with morning mist",
+            "category": "Nature",
+            "resolution": "3840x2160",
+            "size": "2.4 MB",
+            "downloads": 15420,
+            "rating": 4.9,
+            "tags": [
+                "mountains",
+                "landscape",
+                "nature",
+                "mist"
+            ],
+            "author": "Alex Chen",
+            "dateAdded": "2024-01-15",
+            "colors": [
+                "#2D5A87",
+                "#8B9DC3",
+                "#DDE6F0"
+            ],
+            "thumbnail": "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=225&fit=crop",
+            "preview": "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=450&fit=crop",
+            "fullRes": "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=3840&h=2160&fit=crop"
+        },
+        {
+            "id": 2,
+            "title": "Neon City",
+            "description": "Cyberpunk cityscape with vibrant neon lights",
+            "category": "City",
+            "resolution": "3840x2160",
+            "size": "3.1 MB",
+            "downloads": 28350,
+            "rating": 4.8,
+            "tags": [
+                "city",
+                "neon",
+                "cyberpunk",
+                "night"
+            ],
+            "author": "Sarah Kim",
+            "dateAdded": "2024-01-12",
+            "colors": [
+                "#FF006E",
+                "#8338EC",
+                "#3A86FF"
+            ],
+            "thumbnail": "https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=400&h=225&fit=crop",
+            "preview": "https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=800&h=450&fit=crop",
+            "fullRes": "https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=3840&h=2160&fit=crop"
+        },
+        {
+            "id": 3,
+            "title": "Cosmic Nebula",
+            "description": "Deep space nebula with stunning cosmic colors",
+            "category": "Space",
+            "resolution": "3840x2160",
+            "size": "4.2 MB",
+            "downloads": 19780,
+            "rating": 4.9,
+            "tags": [
+                "space",
+                "nebula",
+                "cosmic",
+                "stars"
+            ],
+            "author": "Mike Torres",
+            "dateAdded": "2024-01-10",
+            "colors": [
+                "#4A0E4E",
+                "#81689D",
+                "#FFD23F"
+            ],
+            "thumbnail": "https://images.unsplash.com/photo-1446776877081-d282a0f896e2?w=400&h=225&fit=crop",
+            "preview": "https://images.unsplash.com/photo-1446776877081-d282a0f896e2?w=800&h=450&fit=crop",
+            "fullRes": "https://images.unsplash.com/photo-1446776877081-d282a0f896e2?w=3840&h=2160&fit=crop"
+        },
+        {
+            "id": 4,
+            "title": "Minimal Lines",
+            "description": "Clean geometric lines on gradient background",
+            "category": "Minimalist",
+            "resolution": "3840x2160",
+            "size": "1.2 MB",
+            "downloads": 31250,
+            "rating": 4.7,
+            "tags": [
+                "minimal",
+                "geometric",
+                "clean",
+                "gradient"
+            ],
+            "author": "Emma Wilson",
+            "dateAdded": "2024-01-08",
+            "colors": [
+                "#F8F9FA",
+                "#E9ECEF",
+                "#6C757D"
+            ],
+            "thumbnail": "https://images.unsplash.com/photo-1557683316-973673baf926?w=400&h=225&fit=crop",
+            "preview": "https://images.unsplash.com/photo-1557683316-973673baf926?w=800&h=450&fit=crop",
+            "fullRes": "https://images.unsplash.com/photo-1557683316-973673baf926?w=3840&h=2160&fit=crop"
+        },
+        {
+            "id": 5,
+            "title": "Abstract Flow",
+            "description": "Fluid abstract shapes in vibrant colors",
+            "category": "Abstract",
+            "resolution": "3840x2160",
+            "size": "2.8 MB",
+            "downloads": 22150,
+            "rating": 4.8,
+            "tags": [
+                "abstract",
+                "fluid",
+                "colorful",
+                "flow"
+            ],
+            "author": "David Park",
+            "dateAdded": "2024-01-05",
+            "colors": [
+                "#FF6B6B",
+                "#4ECDC4",
+                "#45B7D1"
+            ],
+            "thumbnail": "https://images.unsplash.com/photo-1558021212-51b6ecfa0db9?w=400&h=225&fit=crop",
+            "preview": "https://images.unsplash.com/photo-1558021212-51b6ecfa0db9?w=800&h=450&fit=crop",
+            "fullRes": "https://images.unsplash.com/photo-1558021212-51b6ecfa0db9?w=3840&h=2160&fit=crop"
+        },
+        {
+            "id": 6,
+            "title": "Dark Forest",
+            "description": "Mysterious dark forest with moonlight",
+            "category": "Dark",
+            "resolution": "3840x2160",
+            "size": "3.5 MB",
+            "downloads": 18920,
+            "rating": 4.6,
+            "tags": [
+                "dark",
+                "forest",
+                "moonlight",
+                "mystery"
+            ],
+            "author": "Lisa Rodriguez",
+            "dateAdded": "2024-01-03",
+            "colors": [
+                "#1A1A1A",
+                "#2D3748",
+                "#4A5568"
+            ],
+            "thumbnail": "https://images.unsplash.com/photo-1558021212-51b6ecfa0db9?w=400&h=225&fit=crop",
+            "preview": "https://images.unsplash.com/photo-1558021212-51b6ecfa0db9?w=800&h=450&fit=crop",
+            "fullRes": "https://images.unsplash.com/photo-1558021212-51b6ecfa0db9?w=3840&h=2160&fit=crop"
+        },
+        {
+            "id": 7,
+            "title": "Gaming Setup",
+            "description": "Modern gaming battlestation with RGB lighting",
+            "category": "Gaming",
+            "resolution": "3840x2160",
+            "size": "2.9 MB",
+            "downloads": 25680,
+            "rating": 4.8,
+            "tags": [
+                "gaming",
+                "setup",
+                "rgb",
+                "modern"
+            ],
+            "author": "Alex Johnson",
+            "dateAdded": "2024-01-01",
+            "colors": [
+                "#FF0080",
+                "#8000FF",
+                "#0080FF"
+            ],
+            "thumbnail": "https://images.unsplash.com/photo-1587202372634-32705e3bf49c?w=400&h=225&fit=crop",
+            "preview": "https://images.unsplash.com/photo-1587202372634-32705e3bf49c?w=800&h=450&fit=crop",
+            "fullRes": "https://images.unsplash.com/photo-1587202372634-32705e3bf49c?w=3840&h=2160&fit=crop"
+        },
+        {
+            "id": 8,
+            "title": "Ocean Waves",
+            "description": "Serene ocean waves at golden hour",
+            "category": "Nature",
+            "resolution": "3840x2160",
+            "size": "3.3 MB",
+            "downloads": 33420,
+            "rating": 4.9,
+            "tags": [
+                "ocean",
+                "waves",
+                "sunset",
+                "peaceful"
+            ],
+            "author": "Maria Santos",
+            "dateAdded": "2023-12-28",
+            "colors": [
+                "#FFD700",
+                "#FF8C00",
+                "#4682B4"
+            ],
+            "thumbnail": "https://images.unsplash.com/photo-1505142468610-359e7d316be0?w=400&h=225&fit=crop",
+            "preview": "https://images.unsplash.com/photo-1505142468610-359e7d316be0?w=800&h=450&fit=crop",
+            "fullRes": "https://images.unsplash.com/photo-1505142468610-359e7d316be0?w=3840&h=2160&fit=crop"
+        },
+        {
+            "id": 9,
+            "title": "Purple Gradient",
+            "description": "Smooth purple to pink gradient background",
+            "category": "Gradient",
+            "resolution": "3840x2160",
+            "size": "1.1 MB",
+            "downloads": 41200,
+            "rating": 4.7,
+            "tags": [
+                "gradient",
+                "purple",
+                "pink",
+                "smooth"
+            ],
+            "author": "Chris Lee",
+            "dateAdded": "2023-12-25",
+            "colors": [
+                "#8B5CF6",
+                "#EC4899",
+                "#F97316"
+            ],
+            "thumbnail": "https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=400&h=225&fit=crop",
+            "preview": "https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=800&h=450&fit=crop",
+            "fullRes": "https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=3840&h=2160&fit=crop"
+        },
+        {
+            "id": 10,
+            "title": "Cosmic Gateway",
+            "description": "Stellar portal through deep space",
+            "category": "Space",
+            "resolution": "3840x2160",
+            "size": "4.5 MB",
+            "downloads": 17890,
+            "rating": 4.8,
+            "tags": [
+                "space",
+                "portal",
+                "cosmic",
+                "galaxy"
+            ],
+            "author": "Ryan Mitchell",
+            "dateAdded": "2023-12-22",
+            "colors": [
+                "#000000",
+                "#4B0082",
+                "#FF1493"
+            ],
+            "thumbnail": "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=400&h=225&fit=crop",
+            "preview": "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=800&h=450&fit=crop",
+            "fullRes": "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=3840&h=2160&fit=crop"
+        },
+        {
+            "id": 11,
+            "title": "Urban Skyline",
+            "description": "Modern city skyline at twilight",
+            "category": "City",
+            "resolution": "3840x2160",
+            "size": "3.7 MB",
+            "downloads": 29340,
+            "rating": 4.6,
+            "tags": [
+                "city",
+                "skyline",
+                "urban",
+                "twilight"
+            ],
+            "author": "Sofia Garcia",
+            "dateAdded": "2023-12-20",
+            "colors": [
+                "#1E3A8A",
+                "#3B82F6",
+                "#FCD34D"
+            ],
+            "thumbnail": "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=400&h=225&fit=crop",
+            "preview": "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=800&h=450&fit=crop",
+            "fullRes": "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=3840&h=2160&fit=crop"
+        },
+        {
+            "id": 12,
+            "title": "Zen Garden",
+            "description": "Peaceful zen garden with cherry blossoms",
+            "category": "Minimalist",
+            "resolution": "3840x2160",
+            "size": "2.6 MB",
+            "downloads": 21750,
+            "rating": 4.9,
+            "tags": [
+                "zen",
+                "peaceful",
+                "minimal",
+                "japanese"
+            ],
+            "author": "Kenji Tanaka",
+            "dateAdded": "2023-12-18",
+            "colors": [
+                "#F8F8FF",
+                "#FFB6C1",
+                "#90EE90"
+            ],
+            "thumbnail": "https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=400&h=225&fit=crop",
+            "preview": "https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800&h=450&fit=crop",
+            "fullRes": "https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=3840&h=2160&fit=crop"
+        },
+        {
+            "id": 13,
+            "title": "Retro Synthwave",
+            "description": "80s inspired synthwave sunset grid",
+            "category": "Retro",
+            "resolution": "3840x2160",
+            "size": "2.2 MB",
+            "downloads": 28900,
+            "rating": 4.8,
+            "tags": [
+                "retro",
+                "synthwave",
+                "80s",
+                "neon"
+            ],
+            "author": "James Wilson",
+            "dateAdded": "2023-12-15",
+            "colors": [
+                "#FF1493",
+                "#00FFFF",
+                "#FFD700"
+            ],
+            "thumbnail": "https://images.unsplash.com/photo-1510511233900-1982d92bd835?w=400&h=225&fit=crop",
+            "preview": "https://images.unsplash.com/photo-1510511233900-1982d92bd835?w=800&h=450&fit=crop",
+            "fullRes": "https://images.unsplash.com/photo-1510511233900-1982d92bd835?w=3840&h=2160&fit=crop"
+        },
+        {
+            "id": 14,
+            "title": "Anime Scenery",
+            "description": "Beautiful anime style countryside landscape",
+            "category": "Anime",
+            "resolution": "3840x2160",
+            "size": "3.8 MB",
+            "downloads": 35200,
+            "rating": 4.9,
+            "tags": [
+                "anime",
+                "landscape",
+                "artistic",
+                "japan"
+            ],
+            "author": "Yuki Sato",
+            "dateAdded": "2023-12-12",
+            "colors": [
+                "#87CEEB",
+                "#90EE90",
+                "#FFB6C1"
+            ],
+            "thumbnail": "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=400&h=225&fit=crop",
+            "preview": "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=800&h=450&fit=crop",
+            "fullRes": "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=3840&h=2160&fit=crop"
+        },
+        {
+            "id": 15,
+            "title": "Tech Circuit",
+            "description": "Glowing technology circuit board pattern",
+            "category": "Dark",
+            "resolution": "3840x2160",
+            "size": "2.5 MB",
+            "downloads": 19800,
+            "rating": 4.7,
+            "tags": [
+                "technology",
+                "circuit",
+                "digital",
+                "glow"
+            ],
+            "author": "Mark Zhang",
+            "dateAdded": "2023-12-10",
+            "colors": [
+                "#00FF00",
+                "#003366",
+                "#000000"
+            ],
+            "thumbnail": "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&h=225&fit=crop",
+            "preview": "https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&h=450&fit=crop",
+            "fullRes": "https://images.unsplash.com/photo-1518770660439-4636190af475?w=3840&h=2160&fit=crop"
+        },
+        {
+            "id": 16,
+            "title": "Cosmic Nebula",
+            "description": "Vibrant space nebula with swirling colors",
+            "category": "Space",
+            "resolution": "3840x2160",
+            "size": "3.1 MB",
+            "downloads": 24500,
+            "rating": 4.9,
+            "tags": [
+                "space",
+                "nebula",
+                "cosmos",
+                "colorful"
+            ],
+            "author": "Sarah Miller",
+            "dateAdded": "2023-12-08",
+            "colors": [
+                "#800080",
+                "#4B0082",
+                "#000000"
+            ],
+            "thumbnail": "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=400&h=225&fit=crop",
+            "preview": "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=800&h=450&fit=crop",
+            "fullRes": "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=3840&h=2160&fit=crop"
+        },
+        {
+            "id": 17,
+            "title": "Minimalist Dawn",
+            "description": "Simple geometric sunrise composition",
+            "category": "Minimalist",
+            "resolution": "3840x2160",
+            "size": "1.8 MB",
+            "downloads": 18200,
+            "rating": 4.6,
+            "tags": [
+                "minimalist",
+                "geometric",
+                "sunrise",
+                "simple"
+            ],
+            "author": "Emma White",
+            "dateAdded": "2023-12-05",
+            "colors": [
+                "#FFA07A",
+                "#FFFFFF",
+                "#87CEEB"
+            ],
+            "thumbnail": "https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?w=400&h=225&fit=crop",
+            "preview": "https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?w=800&h=450&fit=crop",
+            "fullRes": "https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?w=3840&h=2160&fit=crop"
+        },
+        {
+            "id": 18,
+            "title": "Neon Dreams",
+            "description": "Abstract neon light trails in darkness",
+            "category": "Abstract",
+            "resolution": "3840x2160",
+            "size": "2.7 MB",
+            "downloads": 21300,
+            "rating": 4.8,
+            "tags": [
+                "abstract",
+                "neon",
+                "lights",
+                "dark"
+            ],
+            "author": "Chris Black",
+            "dateAdded": "2023-12-03",
+            "colors": [
+                "#FF1493",
+                "#00FFFF",
+                "#000000"
+            ],
+            "thumbnail": "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=400&h=225&fit=crop",
+            "preview": "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=800&h=450&fit=crop",
+            "fullRes": "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=3840&h=2160&fit=crop"
+        },
+        {
+            "id": 19,
+            "title": "Pixel Art Forest",
+            "description": "Retro-style pixel art forest scene",
+            "category": "Gaming",
+            "resolution": "3840x2160",
+            "size": "1.5 MB",
+            "downloads": 28700,
+            "rating": 4.9,
+            "tags": [
+                "gaming",
+                "pixel art",
+                "retro",
+                "forest"
+            ],
+            "author": "Mike Pixel",
+            "dateAdded": "2023-12-01",
+            "colors": [
+                "#228B22",
+                "#8B4513",
+                "#87CEEB"
+            ],
+            "thumbnail": "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=400&h=225&fit=crop",
+            "preview": "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=800&h=450&fit=crop",
+            "fullRes": "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=3840&h=2160&fit=crop"
+        },
+        {
+            "id": 20,
+            "title": "Sakura Dreams",
+            "description": "Peaceful anime cherry blossom scene",
+            "category": "Anime",
+            "resolution": "3840x2160",
+            "size": "2.9 MB",
+            "downloads": 31500,
+            "rating": 4.9,
+            "tags": [
+                "anime",
+                "cherry blossom",
+                "sakura",
+                "peaceful"
+            ],
+            "author": "Hana Tanaka",
+            "dateAdded": "2023-11-28",
+            "colors": [
+                "#FFB7C5",
+                "#FFFFFF",
+                "#98FB98"
+            ],
+            "thumbnail": "https://images.unsplash.com/photo-1522441815192-d9f04eb0615c?w=400&h=225&fit=crop",
+            "preview": "https://images.unsplash.com/photo-1522441815192-d9f04eb0615c?w=800&h=450&fit=crop",
+            "fullRes": "https://images.unsplash.com/photo-1522441815192-d9f04eb0615c?w=3840&h=2160&fit=crop"
+        },
+        {
+            "id": 21,
+            "title": "Midnight City",
+            "description": "Dark cityscape with purple neon accents",
+            "category": "City",
+            "resolution": "3840x2160",
+            "size": "3.2 MB",
+            "downloads": 27800,
+            "rating": 4.8,
+            "tags": [
+                "city",
+                "night",
+                "neon",
+                "urban"
+            ],
+            "author": "David Night",
+            "dateAdded": "2023-11-25",
+            "colors": [
+                "#2F0459",
+                "#FF00FF",
+                "#000000"
+            ],
+            "thumbnail": "https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=400&h=225&fit=crop",
+            "preview": "https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=800&h=450&fit=crop",
+            "fullRes": "https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=3840&h=2160&fit=crop"
+        },
+        {
+            "id": 22,
+            "title": "Retro Wave",
+            "description": "80s style sunset with grid horizon",
+            "category": "Retro",
+            "resolution": "3840x2160",
+            "size": "2.4 MB",
+            "downloads": 25600,
+            "rating": 4.7,
+            "tags": [
+                "retro",
+                "synthwave",
+                "80s",
+                "sunset"
+            ],
+            "author": "John Retro",
+            "dateAdded": "2023-11-22",
+            "colors": [
+                "#FF1493",
+                "#00FFFF",
+                "#FFD700"
+            ],
+            "thumbnail": "https://images.unsplash.com/photo-1510511233900-1982d92bd835?w=400&h=225&fit=crop",
+            "preview": "https://images.unsplash.com/photo-1510511233900-1982d92bd835?w=800&h=450&fit=crop",
+            "fullRes": "https://images.unsplash.com/photo-1510511233900-1982d92bd835?w=3840&h=2160&fit=crop"
+        },
+        {
+            "id": 23,
+            "title": "Abstract Flow",
+            "description": "Flowing abstract color patterns",
+            "category": "Abstract",
+            "resolution": "3840x2160",
+            "size": "2.8 MB",
+            "downloads": 22400,
+            "rating": 4.6,
+            "tags": [
+                "abstract",
+                "fluid",
+                "colorful",
+                "art"
+            ],
+            "author": "Lisa Flow",
+            "dateAdded": "2023-11-19",
+            "colors": [
+                "#FF4500",
+                "#4B0082",
+                "#00FF00"
+            ],
+            "thumbnail": "https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=400&h=225&fit=crop",
+            "preview": "https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=800&h=450&fit=crop",
+            "fullRes": "https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=3840&h=2160&fit=crop"
+        },
+        {
+            "id": 24,
+            "title": "Dark Forest",
+            "description": "Mysterious dark forest at twilight",
+            "category": "Dark",
+            "resolution": "3840x2160",
+            "size": "2.6 MB",
+            "downloads": 20100,
+            "rating": 4.7,
+            "tags": [
+                "dark",
+                "forest",
+                "nature",
+                "mysterious"
+            ],
+            "author": "Thomas Dark",
+            "dateAdded": "2023-11-16",
+            "colors": [
+                "#001F3F",
+                "#003366",
+                "#006400"
+            ],
+            "thumbnail": "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?w=400&h=225&fit=crop",
+            "preview": "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?w=800&h=450&fit=crop",
+            "fullRes": "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?w=3840&h=2160&fit=crop"
+        },
+        {
+            "id": 25,
+            "title": "Gradient Dreams",
+            "description": "Smooth color gradient transitions",
+            "category": "Gradient",
+            "resolution": "3840x2160",
+            "size": "1.9 MB",
+            "downloads": 23700,
+            "rating": 4.8,
+            "tags": [
+                "gradient",
+                "colors",
+                "smooth",
+                "minimal"
+            ],
+            "author": "Color Master",
+            "dateAdded": "2023-11-13",
+            "colors": [
+                "#FF6B6B",
+                "#4ECDC4",
+                "#45B7D1"
+            ],
+            "thumbnail": "https://images.unsplash.com/photo-1557682250-33bd709cbe85?w=400&h=225&fit=crop",
+            "preview": "https://images.unsplash.com/photo-1557682250-33bd709cbe85?w=800&h=450&fit=crop",
+            "fullRes": "https://images.unsplash.com/photo-1557682250-33bd709cbe85?w=3840&h=2160&fit=crop"
+        },
+        {
+            "id": 26,
+            "title": "Gaming Arena",
+            "description": "Futuristic gaming environment",
+            "category": "Gaming",
+            "resolution": "3840x2160",
+            "size": "3.0 MB",
+            "downloads": 29900,
+            "rating": 4.9,
+            "tags": [
+                "gaming",
+                "futuristic",
+                "arena",
+                "scifi"
+            ],
+            "author": "Game Master",
+            "dateAdded": "2023-11-10",
+            "colors": [
+                "#FF4081",
+                "#00BCD4",
+                "#212121"
+            ],
+            "thumbnail": "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=400&h=225&fit=crop",
+            "preview": "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&h=450&fit=crop",
+            "fullRes": "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=3840&h=2160&fit=crop"
+        },
+        {
+            "id": 27,
+            "title": "Minimal Lines",
+            "description": "Clean geometric line patterns",
+            "category": "Minimalist",
+            "resolution": "3840x2160",
+            "size": "1.7 MB",
+            "downloads": 19500,
+            "rating": 4.6,
+            "tags": [
+                "minimalist",
+                "geometric",
+                "lines",
+                "clean"
+            ],
+            "author": "Min Designer",
+            "dateAdded": "2023-11-07",
+            "colors": [
+                "#FFFFFF",
+                "#000000",
+                "#CCCCCC"
+            ],
+            "thumbnail": "https://images.unsplash.com/photo-1520333789090-1afc82db536a?w=400&h=225&fit=crop",
+            "preview": "https://images.unsplash.com/photo-1520333789090-1afc82db536a?w=800&h=450&fit=crop",
+            "fullRes": "https://images.unsplash.com/photo-1520333789090-1afc82db536a?w=3840&h=2160&fit=crop"
+        },
+        {
+            "id": 28,
+            "title": "Space Station",
+            "description": "Orbital space station with Earth view",
+            "category": "Space",
+            "resolution": "3840x2160",
+            "size": "3.3 MB",
+            "downloads": 26400,
+            "rating": 4.8,
+            "tags": [
+                "space",
+                "station",
+                "earth",
+                "scifi"
+            ],
+            "author": "Space Walker",
+            "dateAdded": "2023-11-04",
+            "colors": [
+                "#000080",
+                "#4169E1",
+                "#000000"
+            ],
+            "thumbnail": "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=400&h=225&fit=crop",
+            "preview": "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=800&h=450&fit=crop",
+            "fullRes": "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=3840&h=2160&fit=crop"
+        },
+        {
+            "id": 29,
+            "title": "Anime Night",
+            "description": "Nighttime anime city scene",
+            "category": "Anime",
+            "resolution": "3840x2160",
+            "size": "2.8 MB",
+            "downloads": 32100,
+            "rating": 4.9,
+            "tags": [
+                "anime",
+                "night",
+                "city",
+                "lights"
+            ],
+            "author": "Anime Artist",
+            "dateAdded": "2023-11-01",
+            "colors": [
+                "#191970",
+                "#483D8B",
+                "#4B0082"
+            ],
+            "thumbnail": "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=400&h=225&fit=crop",
+            "preview": "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=800&h=450&fit=crop",
+            "fullRes": "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=3840&h=2160&fit=crop"
+        },
+        {
+            "id": 30,
+            "title": "Retro Gaming",
+            "description": "Classic gaming console aesthetic",
+            "category": "Retro",
+            "resolution": "3840x2160",
+            "size": "2.3 MB",
+            "downloads": 27200,
+            "rating": 4.7,
+            "tags": [
+                "retro",
+                "gaming",
+                "console",
+                "classic"
+            ],
+            "author": "Retro Gamer",
+            "dateAdded": "2023-10-29",
+            "colors": [
+                "#808080",
+                "#C0C0C0",
+                "#000000"
+            ],
+            "thumbnail": "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=400&h=225&fit=crop",
+            "preview": "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=800&h=450&fit=crop",
+            "fullRes": "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=3840&h=2160&fit=crop"
+        },
+        {
+            "id": 31,
+            "title": "Dark Abstract",
+            "description": "Abstract dark patterns with light accents",
+            "category": "Dark",
+            "resolution": "3840x2160",
+            "size": "2.5 MB",
+            "downloads": 21800,
+            "rating": 4.6,
+            "tags": [
+                "dark",
+                "abstract",
+                "pattern",
+                "minimal"
+            ],
+            "author": "Dark Artist",
+            "dateAdded": "2023-10-26",
+            "colors": [
+                "#000000",
+                "#1A1A1A",
+                "#333333"
+            ],
+            "thumbnail": "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=400&h=225&fit=crop",
+            "preview": "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=800&h=450&fit=crop",
+            "fullRes": "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=3840&h=2160&fit=crop"
+        },
+        {
+            "id": 32,
+            "title": "Nature's Gradient",
+            "description": "Natural color gradients from landscape",
+            "category": "Gradient",
+            "resolution": "3840x2160",
+            "size": "2.1 MB",
+            "downloads": 24100,
+            "rating": 4.8,
+            "tags": [
+                "gradient",
+                "nature",
+                "landscape",
+                "colors"
+            ],
+            "author": "Nature Artist",
+            "dateAdded": "2023-10-23",
+            "colors": [
+                "#2E8B57",
+                "#20B2AA",
+                "#87CEEB"
+            ],
+            "thumbnail": "https://images.unsplash.com/photo-1557682250-33bd709cbe85?w=400&h=225&fit=crop",
+            "preview": "https://images.unsplash.com/photo-1557682250-33bd709cbe85?w=800&h=450&fit=crop",
+            "fullRes": "https://images.unsplash.com/photo-1557682250-33bd709cbe85?w=3840&h=2160&fit=crop"
+        },
+        {
+            "id": 33,
+            "title": "Cyberpunk City",
+            "description": "Futuristic cyberpunk cityscape",
+            "category": "City",
+            "resolution": "3840x2160",
+            "size": "3.4 MB",
+            "downloads": 30500,
+            "rating": 4.9,
+            "tags": [
+                "cyberpunk",
+                "city",
+                "futuristic",
+                "neon"
+            ],
+            "author": "Cyber Artist",
+            "dateAdded": "2023-10-20",
+            "colors": [
+                "#FF00FF",
+                "#00FFFF",
+                "#000000"
+            ],
+            "thumbnail": "https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=400&h=225&fit=crop",
+            "preview": "https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=800&h=450&fit=crop",
+            "fullRes": "https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=3840&h=2160&fit=crop"
+        },
+        {
+            "id": 34,
+            "title": "Minimal Space",
+            "description": "Minimalist space scene with planets",
+            "category": "Space",
+            "resolution": "3840x2160",
+            "size": "2.7 MB",
+            "downloads": 25300,
+            "rating": 4.7,
+            "tags": [
+                "space",
+                "minimal",
+                "planets",
+                "clean"
+            ],
+            "author": "Space Artist",
+            "dateAdded": "2023-10-17",
+            "colors": [
+                "#000000",
+                "#4B0082",
+                "#483D8B"
+            ],
+            "thumbnail": "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=400&h=225&fit=crop",
+            "preview": "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=800&h=450&fit=crop",
+            "fullRes": "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=3840&h=2160&fit=crop"
+        }
+    ]
+}

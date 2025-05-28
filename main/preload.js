@@ -15,6 +15,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
   closeWindow: () => ipcRenderer.invoke("window-close"),
   isMaximized: () => ipcRenderer.invoke("window-is-maximized"),
 
+  // Wallpaper functionality
+  downloadWallpaper: (url, filename) =>
+    ipcRenderer.invoke("download-wallpaper", { url, filename }),
+  setWallpaper: (url, filename) =>
+    ipcRenderer.invoke("set-wallpaper", { url, filename }),
+  checkWallpaperExists: (filename) =>
+    ipcRenderer.invoke("check-wallpaper-exists", { filename }),
+
   // System utilities
   platform: process.platform,
   versions: process.versions,

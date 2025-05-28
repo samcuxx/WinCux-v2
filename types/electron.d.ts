@@ -9,6 +9,19 @@ export interface ElectronAPI {
   closeWindow: () => Promise<void>;
   isMaximized: () => Promise<boolean>;
 
+  // Wallpaper functionality
+  downloadWallpaper: (
+    url: string,
+    filename: string
+  ) => Promise<{ success: boolean; path?: string; error?: string }>;
+  setWallpaper: (
+    url: string,
+    filename: string
+  ) => Promise<{ success: boolean; path?: string; error?: string }>;
+  checkWallpaperExists: (
+    filename: string
+  ) => Promise<{ exists: boolean; path?: string | null; error?: string }>;
+
   // System utilities
   platform: string;
   versions: {
