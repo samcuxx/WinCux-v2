@@ -14,12 +14,6 @@ import {
   Monitor,
   Palette,
 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 interface TopBarProps {
   title?: string;
@@ -61,8 +55,29 @@ export function TopBar({ title }: TopBarProps) {
     }
   };
 
+  const handleThemeToggle = () => {
+    if (!mounted) return;
+    
+    switch (theme) {
+      case "light":
+        setTheme("dark");
+        break;
+      case "dark":
+        setTheme("system");
+        break;
+      case "system":
+      default:
+        setTheme("light");
+        break;
+    }
+  };
+
   const getThemeIcon = () => {
     if (!mounted) return <Monitor className="h-4 w-4" />;
+
+    if (theme === "system") {
+      return <Monitor className="h-4 w-4 text-gray-500" />;
+    }
 
     switch (resolvedTheme) {
       case "light":
@@ -94,10 +109,7 @@ export function TopBar({ title }: TopBarProps) {
       style={{ WebkitAppRegion: "drag" } as any}
     >
       {/* Left side - App info */}
-      <div className="flex items-center space-x-3">
-       
-    
-      </div>
+      <div className="flex items-center space-x-3"></div>
 
       {/* Right side - Theme toggle and window controls */}
       <div
@@ -105,56 +117,18 @@ export function TopBar({ title }: TopBarProps) {
         style={{ WebkitAppRegion: "no-drag" } as any}
       >
         {/* Professional Theme Toggle */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 hover:bg-accent hover:text-accent-foreground rounded-md transition-all duration-200 relative group"
-              title={`Current theme: ${getCurrentThemeLabel()}`}
-            >
-              <div className="relative">
-                {getThemeIcon()}
-                <div className="absolute -inset-1 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"></div>
-              </div>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="end"
-            className="w-40 bg-background/95 backdrop-blur-md border border-border/50 shadow-xl"
-          >
-            <DropdownMenuItem
-              onClick={() => setTheme("light")}
-              className="flex items-center space-x-2 cursor-pointer hover:bg-accent/50 transition-colors"
-            >
-              <Sun className="h-4 w-4 text-amber-500" />
-              <span>Light</span>
-              {theme === "light" && (
-                <div className="ml-auto w-2 h-2 bg-blue-500 rounded-full"></div>
-              )}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => setTheme("dark")}
-              className="flex items-center space-x-2 cursor-pointer hover:bg-accent/50 transition-colors"
-            >
-              <Moon className="h-4 w-4 text-blue-400" />
-              <span>Dark</span>
-              {theme === "dark" && (
-                <div className="ml-auto w-2 h-2 bg-blue-500 rounded-full"></div>
-              )}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => setTheme("system")}
-              className="flex items-center space-x-2 cursor-pointer hover:bg-accent/50 transition-colors"
-            >
-              <Monitor className="h-4 w-4 text-gray-500" />
-              <span>System</span>
-              {theme === "system" && (
-                <div className="ml-auto w-2 h-2 bg-blue-500 rounded-full"></div>
-              )}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 w-8 hover:bg-accent hover:text-accent-foreground rounded-md transition-all duration-200 relative group"
+          onClick={handleThemeToggle}
+          title={`Current theme: ${getCurrentThemeLabel()}`}
+        >
+          <div className="relative">
+            {getThemeIcon()}
+            <div className="absolute -inset-1 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"></div>
+          </div>
+        </Button>
 
         {/* Window Controls */}
         {isElectron && (

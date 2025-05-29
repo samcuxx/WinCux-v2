@@ -5,6 +5,7 @@ import {
   SearchResult,
 } from "@/lib/providers/wallpaper-provider";
 import { LocalWallpaper } from "@/types/wallhaven";
+import { useSettings } from "@/lib/contexts/settings-context";
 
 interface UseWallpapersOptions extends SearchOptions {
   autoLoad?: boolean;
@@ -32,6 +33,7 @@ interface UseWallpapersResult {
 export function useWallpapers(
   options: UseWallpapersOptions = {}
 ): UseWallpapersResult {
+  const { getPuritySetting } = useSettings();
   const [wallpapers, setWallpapers] = useState<LocalWallpaper[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -84,7 +86,7 @@ export function useWallpapers(
         }
 
         // If no cache or cache is old, perform initial search
-        const searchOptions =
+        const searchOptions: SearchOptions =
           autoLoad !== false ? options : { sorting: "date_added" };
         await performSearch(searchOptions, false);
       } catch (err) {
@@ -121,6 +123,7 @@ export function useWallpapers(
 
         const result = await wallpaperProvider.search({
           ...searchOptions,
+          purity: getPuritySetting(),
           page: 1,
         });
 
@@ -164,7 +167,7 @@ export function useWallpapers(
         abortControllerRef.current = null;
       }
     },
-    []
+    [getPuritySetting]
   );
 
   const search = useCallback(
@@ -187,6 +190,7 @@ export function useWallpapers(
 
       const result = await wallpaperProvider.loadMore({
         ...currentOptions,
+        purity: getPuritySetting(),
         page: currentPage,
       });
 
@@ -235,6 +239,44 @@ export function useWallpapers(
   const getCacheStats = useCallback(() => {
     return wallpaperProvider.getCacheStats();
   }, []);
+
+  // Listen for NSFW setting changes and clear cache
+  useEffect(() => {
+    const handleNSFWSettingChange = (event: CustomEvent) => {
+      console.log("NSFW setting change detected:", event.detail);
+
+      // Clear cache immediately
+      wallpaperProvider.clearCache();
+      setIsFromCache(false);
+      setCacheAge(undefined);
+
+      // Refresh current search with new settings immediately
+      if (currentOptions && !isLoading) {
+        console.log("Refreshing wallpapers with new NSFW setting");
+        performSearch(
+          {
+            ...currentOptions,
+            purity: event.detail.puritySetting,
+          },
+          true
+        ).catch((error) => {
+          console.error(
+            "Failed to refresh wallpapers after NSFW setting change:",
+            error
+          );
+        });
+      }
+    };
+
+    // Type assertion for the custom event
+    const typedHandler = handleNSFWSettingChange as EventListener;
+
+    window.addEventListener("nsfw-setting-changed", typedHandler);
+
+    return () => {
+      window.removeEventListener("nsfw-setting-changed", typedHandler);
+    };
+  }, [currentOptions, performSearch, isLoading]);
 
   // Cleanup on unmount
   useEffect(() => {

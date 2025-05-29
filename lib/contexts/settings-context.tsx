@@ -1,117 +1,172 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-
-export interface WallpaperSettings {
-  // Content Filtering
-  contentFilter: "sfw" | "sfw-sketchy" | "all"; // SFW only, SFW + Sketchy, All content
-  workspaceMode: boolean; // Extra safe mode for workplace
-
-  // Quality & Performance
-  preferredResolution: "any" | "1920x1080" | "2560x1440" | "3840x2160";
-  imageQuality: "thumbnail" | "small" | "large" | "original";
-
-  // Source Preferences
-  enabledSources: string[]; // Which sources to fetch from
-
-  // Professional Features
-  blurNonSafeContent: boolean; // Blur potentially inappropriate content
-  hideExplicitTags: boolean; // Hide explicit tags in UI
-  professionalMode: boolean; // Overall professional mode toggle
-
-  // Cache & Performance
-  enableBackgroundRefresh: boolean;
-  maxCacheSize: number; // in MB
-}
+import { wallpaperProvider } from "@/lib/providers/wallpaper-provider";
 
 interface SettingsContextType {
-  settings: WallpaperSettings;
-  updateSettings: (updates: Partial<WallpaperSettings>) => void;
-  resetSettings: () => void;
-  exportSettings: () => string;
-  importSettings: (settingsJson: string) => boolean;
-}
+  // NSFW Filter Settings
+  allowNSFW: boolean;
+  setAllowNSFW: (allow: boolean) => void;
 
-const defaultSettings: WallpaperSettings = {
-  contentFilter: "sfw",
-  workspaceMode: true,
-  preferredResolution: "any",
-  imageQuality: "large",
-  enabledSources: ["wallhaven"],
-  blurNonSafeContent: true,
-  hideExplicitTags: true,
-  professionalMode: true,
-  enableBackgroundRefresh: true,
-  maxCacheSize: 50,
-};
+  // Purity settings for API
+  getPuritySetting: () => string;
+
+  // Other potential settings
+  cacheEnabled: boolean;
+  setCacheEnabled: (enabled: boolean) => void;
+
+  // Cache management (unified with wallpapers page)
+  clearCache: () => void;
+  getCacheStats: () => any;
+
+  // Reset all settings
+  resetSettings: () => void;
+}
 
 const SettingsContext = createContext<SettingsContextType | undefined>(
   undefined
 );
 
-export function SettingsProvider({ children }: { children: React.ReactNode }) {
-  const [settings, setSettings] = useState<WallpaperSettings>(defaultSettings);
+// Default settings
+const DEFAULT_SETTINGS = {
+  allowNSFW: false,
+  cacheEnabled: true,
+};
+
+interface SettingsProviderProps {
+  children: React.ReactNode;
+}
+
+export function SettingsProvider({ children }: SettingsProviderProps) {
+  const [allowNSFW, setAllowNSFWState] = useState(DEFAULT_SETTINGS.allowNSFW);
+  const [cacheEnabled, setCacheEnabledState] = useState(
+    DEFAULT_SETTINGS.cacheEnabled
+  );
   const [isLoaded, setIsLoaded] = useState(false);
 
   // Load settings from localStorage on mount
   useEffect(() => {
-    try {
-      const savedSettings = localStorage.getItem("wallpaper-settings");
-      if (savedSettings) {
-        const parsed = JSON.parse(savedSettings);
-        setSettings({ ...defaultSettings, ...parsed });
+    const loadSettings = () => {
+      try {
+        const savedSettings = localStorage.getItem("wallpaper-app-settings");
+        if (savedSettings) {
+          const parsed = JSON.parse(savedSettings);
+          setAllowNSFWState(parsed.allowNSFW ?? DEFAULT_SETTINGS.allowNSFW);
+          setCacheEnabledState(
+            parsed.cacheEnabled ?? DEFAULT_SETTINGS.cacheEnabled
+          );
+        }
+      } catch (error) {
+        console.error("Failed to load settings:", error);
+      } finally {
+        setIsLoaded(true);
       }
-    } catch (error) {
-      console.error("Failed to load settings:", error);
-    } finally {
-      setIsLoaded(true);
-    }
+    };
+
+    loadSettings();
   }, []);
 
   // Save settings to localStorage whenever they change
   useEffect(() => {
-    if (isLoaded) {
-      try {
-        localStorage.setItem("wallpaper-settings", JSON.stringify(settings));
-      } catch (error) {
-        console.error("Failed to save settings:", error);
-      }
-    }
-  }, [settings, isLoaded]);
+    if (!isLoaded) return; // Don't save until we've loaded initial settings
 
-  const updateSettings = (updates: Partial<WallpaperSettings>) => {
-    setSettings((prev) => ({ ...prev, ...updates }));
+    const settings = {
+      allowNSFW,
+      cacheEnabled,
+    };
+
+    try {
+      localStorage.setItem("wallpaper-app-settings", JSON.stringify(settings));
+    } catch (error) {
+      console.error("Failed to save settings:", error);
+    }
+  }, [allowNSFW, cacheEnabled, isLoaded]);
+
+  const setAllowNSFW = (allow: boolean) => {
+    console.log("NSFW setting changing from", allowNSFW, "to", allow);
+    setAllowNSFWState(allow);
+
+    // Clear cache immediately when NSFW setting changes
+    wallpaperProvider.clearCache();
+
+    // Dispatch event to notify wallpaper components
+    try {
+      const event = new CustomEvent("nsfw-setting-changed", {
+        detail: {
+          allowNSFW: allow,
+          puritySetting: allow ? "111" : "100",
+        },
+      });
+      window.dispatchEvent(event);
+      console.log("Dispatched NSFW setting change event");
+    } catch (error) {
+      console.error("Failed to dispatch NSFW setting change event:", error);
+    }
+  };
+
+  const setCacheEnabled = (enabled: boolean) => {
+    setCacheEnabledState(enabled);
+  };
+
+  // Get purity setting for Wallhaven API
+  const getPuritySetting = (): string => {
+    if (allowNSFW) {
+      return "111"; // SFW + Sketchy + NSFW
+    }
+    return "100"; // SFW only
+  };
+
+  // Unified cache management
+  const clearCache = () => {
+    wallpaperProvider.clearCache();
+    console.log("Cache cleared from settings context");
+  };
+
+  const getCacheStats = () => {
+    return wallpaperProvider.getCacheStats();
   };
 
   const resetSettings = () => {
-    setSettings(defaultSettings);
-  };
+    setAllowNSFWState(DEFAULT_SETTINGS.allowNSFW);
+    setCacheEnabledState(DEFAULT_SETTINGS.cacheEnabled);
 
-  const exportSettings = () => {
-    return JSON.stringify(settings, null, 2);
-  };
+    // Clear cache when resetting settings
+    wallpaperProvider.clearCache();
 
-  const importSettings = (settingsJson: string): boolean => {
+    // Clear localStorage
     try {
-      const parsed = JSON.parse(settingsJson);
-      setSettings({ ...defaultSettings, ...parsed });
-      return true;
+      localStorage.removeItem("wallpaper-app-settings");
     } catch (error) {
-      console.error("Failed to import settings:", error);
-      return false;
+      console.error("Failed to clear settings:", error);
+    }
+
+    // Dispatch event for reset
+    try {
+      const event = new CustomEvent("nsfw-setting-changed", {
+        detail: {
+          allowNSFW: DEFAULT_SETTINGS.allowNSFW,
+          puritySetting: "100",
+        },
+      });
+      window.dispatchEvent(event);
+    } catch (error) {
+      console.error("Failed to dispatch reset event:", error);
     }
   };
 
-  const value = {
-    settings,
-    updateSettings,
+  const contextValue: SettingsContextType = {
+    allowNSFW,
+    setAllowNSFW,
+    getPuritySetting,
+    cacheEnabled,
+    setCacheEnabled,
+    clearCache,
+    getCacheStats,
     resetSettings,
-    exportSettings,
-    importSettings,
   };
 
   return (
-    <SettingsContext.Provider value={value}>
+    <SettingsContext.Provider value={contextValue}>
       {children}
     </SettingsContext.Provider>
   );

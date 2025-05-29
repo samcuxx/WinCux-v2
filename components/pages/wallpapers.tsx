@@ -25,11 +25,13 @@ import {
   Clock,
   HardDrive,
   Settings,
+  Shield,
 } from "lucide-react";
 import { useWallpapers } from "@/hooks/use-wallpapers";
 import { wallpaperProvider } from "@/lib/providers/wallpaper-provider";
 import { LocalWallpaper } from "@/types/wallhaven";
 import { WallpaperSourceStatus } from "@/components/ui/wallpaper-source-status";
+import { useSettings } from "@/lib/contexts/settings-context";
 
 interface Toast {
   id: string;
@@ -39,6 +41,11 @@ interface Toast {
 }
 
 export function WallpapersPage() {
+  const {
+    allowNSFW,
+    clearCache: clearSettingsCache,
+    getCacheStats: getSettingsCacheStats,
+  } = useSettings();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [sortBy, setSortBy] = useState<
@@ -67,8 +74,6 @@ export function WallpapersPage() {
     isLoadingMore,
     isFromCache,
     cacheAge,
-    clearCache,
-    getCacheStats,
   } = useWallpapers({
     query: searchQuery || undefined,
     category: selectedCategory,
@@ -81,10 +86,10 @@ export function WallpapersPage() {
   const categories = wallpaperProvider.getAvailableCategories();
   const sortingOptions = wallpaperProvider.getSortingOptions();
 
-  // Cache stats
+  // Cache stats from unified system
   const cacheStats = useMemo(
-    () => getCacheStats(),
-    [getCacheStats, wallpapers.length]
+    () => getSettingsCacheStats(),
+    [getSettingsCacheStats, wallpapers.length]
   );
 
   // Format cache age for display
@@ -350,7 +355,7 @@ export function WallpapersPage() {
   }, [wallpapers]);
 
   const handleClearCache = () => {
-    clearCache();
+    clearSettingsCache();
     addToast({
       type: "success",
       message: "Cache cleared successfully",
@@ -397,6 +402,24 @@ export function WallpapersPage() {
                 </span>
               </div>
             )}
+
+            {/* NSFW Filter Status Indicator */}
+            <div className="flex items-center gap-2">
+              <Shield
+                className={`w-4 h-4 ${
+                  allowNSFW ? "text-red-500" : "text-green-500"
+                }`}
+              />
+              <span
+                className={`text-sm ${
+                  allowNSFW
+                    ? "text-red-600 dark:text-red-400"
+                    : "text-green-600 dark:text-green-400"
+                }`}
+              >
+                {allowNSFW ? "All Content" : "SFW Only"}
+              </span>
+            </div>
           </div>
         </div>
 

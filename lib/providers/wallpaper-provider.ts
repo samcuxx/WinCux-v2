@@ -26,6 +26,7 @@ export interface SearchOptions {
     | "relevance";
   order?: "desc" | "asc";
   page?: number;
+  purity?: string; // Wallhaven purity setting: "100" (SFW), "111" (All)
 }
 
 export interface SearchResult {
@@ -44,6 +45,7 @@ class WallpaperProvider {
     sorting: "date_added",
     order: "desc",
     page: 1,
+    purity: "100", // SFW only by default
   };
 
   constructor() {
@@ -206,7 +208,8 @@ class WallpaperProvider {
             normalizedCategory,
             sorting,
             order,
-            page
+            page,
+            mergedOptions.purity
           );
         }
 
@@ -232,7 +235,8 @@ class WallpaperProvider {
         normalizedCategory,
         sorting,
         order,
-        page
+        page,
+        mergedOptions.purity
       );
 
       // Cache the result
@@ -308,7 +312,8 @@ class WallpaperProvider {
         normalizedCategory,
         sorting,
         order,
-        nextPage
+        nextPage,
+        mergedOptions.purity
       );
 
       // Append to existing cache
@@ -337,12 +342,14 @@ class WallpaperProvider {
     category: string,
     sorting: string,
     order: string,
-    page: number
+    page: number,
+    purity?: string
   ): Promise<SearchResult> {
     const searchParams: WallhavenSearchParams = {
       page,
       sorting: sorting as any,
       order: order as any,
+      purity: purity || "100", // Default to SFW only
     };
 
     if (query) {
@@ -380,7 +387,8 @@ class WallpaperProvider {
     category: string,
     sorting: string,
     order: string,
-    page: number
+    page: number,
+    purity?: string
   ): Promise<void> {
     try {
       console.log("Starting background refresh for cached data");
@@ -389,7 +397,8 @@ class WallpaperProvider {
         category,
         sorting,
         order,
-        page
+        page,
+        purity
       );
 
       // Update cache with fresh data
