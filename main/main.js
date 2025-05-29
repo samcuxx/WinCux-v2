@@ -5,6 +5,7 @@ const { TbBackground } = require("react-icons/tb");
 const fs = require("fs");
 const https = require("https");
 const os = require("os");
+const { exec } = require("child_process");
 
 const appServe = app.isPackaged
   ? serve({
@@ -68,28 +69,50 @@ const createWindow = () => {
 
       const filePath = path.join(picturesPath, filename);
 
+      // Check if file already exists
+      if (fs.existsSync(filePath)) {
+        console.log("Wallpaper already exists:", filePath);
+        return { success: true, path: filePath, alreadyExists: true };
+      }
+
       return new Promise((resolve, reject) => {
         const file = fs.createWriteStream(filePath);
 
+        console.log("Downloading wallpaper from:", url);
+        console.log("Saving to:", filePath);
+
         https
           .get(url, (response) => {
+            // Check if response is successful
+            if (response.statusCode !== 200) {
+              reject({
+                success: false,
+                error: `HTTP ${response.statusCode}: ${response.statusMessage}`,
+              });
+              return;
+            }
+
             response.pipe(file);
 
             file.on("finish", () => {
               file.close();
-              resolve({ success: true, path: filePath });
+              console.log("Download completed:", filePath);
+              resolve({ success: true, path: filePath, alreadyExists: false });
             });
 
             file.on("error", (err) => {
               fs.unlink(filePath, () => {}); // Delete the file on error
+              console.error("File write error:", err);
               reject({ success: false, error: err.message });
             });
           })
           .on("error", (err) => {
+            console.error("Download error:", err);
             reject({ success: false, error: err.message });
           });
       });
     } catch (error) {
+      console.error("Download function error:", error);
       return { success: false, error: error.message };
     }
   });
@@ -107,6 +130,133 @@ const createWindow = () => {
     }
   });
 
+  // Rainmeter detection
+  ipcMain.on("check-rainmeter-installation", async (event) => {
+    try {
+      // Common Rainmeter installation paths
+      const commonPaths = [
+        path.join("C:", "Program Files", "Rainmeter", "Rainmeter.exe"),
+        path.join(
+          os.homedir(),
+          "AppData",
+          "Local",
+          "Rainmeter",
+          "Rainmeter.exe"
+        ),
+      ];
+
+      // Check registry for Rainmeter installation (Windows only)
+      if (process.platform === "win32") {
+        exec(
+          'reg query "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall" /s /f "Rainmeter"',
+          (error, stdout) => {
+            let installed = false;
+
+            // Check if Rainmeter is found in registry
+            if (!error && stdout.includes("Rainmeter")) {
+              installed = true;
+            } else {
+              // Fallback: Check common installation paths
+              for (const rainmeterPath of commonPaths) {
+                if (fs.existsSync(rainmeterPath)) {
+                  installed = true;
+                  break;
+                }
+              }
+            }
+
+            // Send result back to renderer
+            event.reply("rainmeter-check-result", { installed });
+          }
+        );
+      } else {
+        // Non-Windows platforms: assume not installed
+        event.reply("rainmeter-check-result", { installed: false });
+      }
+    } catch (error) {
+      console.error("Error checking Rainmeter installation:", error);
+      event.reply("rainmeter-check-result", { installed: false });
+    }
+  });
+
+  // Rainmeter installation
+  ipcMain.on("install-rainmeter", (event) => {
+    if (process.platform !== "win32") {
+      event.reply("rainmeter-install-result", {
+        success: false,
+        error: "Rainmeter installation is only supported on Windows.",
+      });
+      return;
+    }
+
+    try {
+      // Set initial progress
+      event.reply("rainmeter-install-progress", { progress: 10 });
+
+      // Execute winget command to install Rainmeter
+      const wingetProcess = exec(
+        "winget install -e --id Rainmeter.Rainmeter --accept-package-agreements --accept-source-agreements",
+        (error, stdout, stderr) => {
+          if (error) {
+            console.error("Winget installation error:", error);
+            event.reply("rainmeter-install-result", {
+              success: false,
+              error: `Installation failed: ${error.message}`,
+            });
+            return;
+          }
+
+          // Check if stdout contains success messages
+          if (
+            stdout.includes("Successfully installed") ||
+            stdout.includes("was successfully installed")
+          ) {
+            event.reply("rainmeter-install-progress", { progress: 100 });
+            event.reply("rainmeter-install-result", { success: true });
+          } else if (stdout.includes("already installed")) {
+            event.reply("rainmeter-install-progress", { progress: 100 });
+            event.reply("rainmeter-install-result", { success: true });
+          } else {
+            event.reply("rainmeter-install-result", {
+              success: false,
+              error:
+                "Installation process completed but couldn't verify success.",
+            });
+          }
+        }
+      );
+
+      // Track progress
+      let progress = 10;
+      const progressInterval = setInterval(() => {
+        progress += 5;
+        if (progress < 90) {
+          event.reply("rainmeter-install-progress", { progress });
+        } else {
+          clearInterval(progressInterval);
+        }
+      }, 1000);
+
+      // Handle process close
+      wingetProcess.on("close", (code) => {
+        clearInterval(progressInterval);
+
+        if (code !== 0) {
+          event.reply("rainmeter-install-result", {
+            success: false,
+            error: `Process exited with code ${code}`,
+          });
+        }
+      });
+    } catch (error) {
+      console.error("Error starting Rainmeter installation:", error);
+      event.reply("rainmeter-install-result", {
+        success: false,
+        error: `Failed to start installation: ${error.message}`,
+      });
+    }
+  });
+
   // Set wallpaper functionality
   ipcMain.handle("set-wallpaper", async (event, { url, filename }) => {
     try {
@@ -121,28 +271,53 @@ const createWindow = () => {
 
       // Check if file already exists
       if (!fs.existsSync(filePath)) {
+        console.log("Wallpaper not found locally, downloading...");
         // Download the image only if it doesn't exist
         await new Promise((resolve, reject) => {
           const file = fs.createWriteStream(filePath);
 
+          console.log("Downloading wallpaper from:", url);
+          console.log("Saving to:", filePath);
+
           https
             .get(url, (response) => {
+              // Check if response is successful
+              if (response.statusCode !== 200) {
+                reject(
+                  new Error(
+                    `HTTP ${response.statusCode}: ${response.statusMessage}`
+                  )
+                );
+                return;
+              }
+
               response.pipe(file);
 
               file.on("finish", () => {
                 file.close();
+                console.log(
+                  "Download completed for wallpaper setting:",
+                  filePath
+                );
                 resolve();
               });
 
               file.on("error", (err) => {
                 fs.unlink(filePath, () => {});
+                console.error(
+                  "File write error during wallpaper setting:",
+                  err
+                );
                 reject(err);
               });
             })
             .on("error", (err) => {
+              console.error("Download error during wallpaper setting:", err);
               reject(err);
             });
         });
+      } else {
+        console.log("Using existing wallpaper file:", filePath);
       }
 
       // Set as wallpaper based on platform
@@ -275,10 +450,51 @@ const createWindow = () => {
       win.loadURL("app://-");
     });
   } else {
-    win.loadURL("http://localhost:3000");
-    win.webContents.openDevTools();
+    // Try to connect to Next.js dev server on different ports
+    const tryPorts = [3000, 3001, 3002];
+    let currentPortIndex = 0;
+
+    const loadDevServer = () => {
+      const port = tryPorts[currentPortIndex];
+      const devUrl = `http://localhost:${port}`;
+
+      console.log(
+        `Attempting to connect to Next.js dev server on port ${port}...`
+      );
+      win.loadURL(devUrl);
+    };
+
+    // Initial load attempt
+    loadDevServer();
+
+    // Handle load failures by trying the next port
     win.webContents.on("did-fail-load", (e, code, desc) => {
-      win.webContents.reloadIgnoringCache();
+      console.log(
+        `Failed to load on port ${tryPorts[currentPortIndex]}: ${desc}`
+      );
+
+      currentPortIndex++;
+      if (currentPortIndex < tryPorts.length) {
+        // Try next port
+        setTimeout(() => {
+          loadDevServer();
+        }, 1000);
+      } else {
+        // All ports failed, reset and try again
+        console.log("All ports failed, retrying in 3 seconds...");
+        currentPortIndex = 0;
+        setTimeout(() => {
+          loadDevServer();
+        }, 3000);
+      }
+    });
+
+    // Open dev tools only after successful load
+    win.webContents.once("did-finish-load", () => {
+      console.log(
+        `Successfully connected to Next.js dev server on port ${tryPorts[currentPortIndex]}`
+      );
+      win.webContents.openDevTools();
     });
   }
 };

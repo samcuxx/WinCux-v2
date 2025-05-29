@@ -1,6 +1,10 @@
 export interface ElectronAPI {
   // General IPC communication
-  on: (channel: string, callback: Function) => void;
+  on: (channel: string, callback: (event: any, ...args: any[]) => void) => void;
+  removeListener: (
+    channel: string,
+    callback: (event: any, ...args: any[]) => void
+  ) => void;
   send: (channel: string, args: any) => void;
 
   // Window controls

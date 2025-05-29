@@ -1,54 +1,71 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Download, Heart, Monitor, Star, Loader2 } from "lucide-react";
-
-interface Wallpaper {
-  id: number;
-  title: string;
-  description: string;
-  category: string;
-  resolution: string;
-  size: string;
-  downloads: number;
-  rating: number;
-  tags: string[];
-  author: string;
-  dateAdded: string;
-  colors: string[];
-  thumbnail: string;
-  preview: string;
-  fullRes: string;
-}
+import { LocalWallpaper } from "@/types/wallhaven";
 
 interface WallpaperModalProps {
-  wallpaper: Wallpaper | null;
+  wallpaper: LocalWallpaper | null;
   isOpen: boolean;
   onClose: () => void;
+  isDownloaded: boolean;
+  onDownloadComplete: (wallpaperId: string) => void;
 }
 
 export function WallpaperModal({
   wallpaper,
   isOpen,
   onClose,
+  isDownloaded,
+  onDownloadComplete,
 }: WallpaperModalProps) {
+  // All hooks must be called before any conditional returns
   const [isDownloading, setIsDownloading] = useState(false);
   const [isSettingWallpaper, setIsSettingWallpaper] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
+  const [localImagePath, setLocalImagePath] = useState<string | null>(null);
 
-  if (!isOpen || !wallpaper) return null;
-
-  const getFilename = (title: string) => {
-    return `${title.toLowerCase().replace(/\s+/g, "-")}.jpg`;
+  const getFilename = (id: string) => {
+    return `wallpaper_${id}.jpg`;
   };
+
+  // Check for local file when modal opens or wallpaper changes
+  useEffect(() => {
+    const checkLocalFile = async () => {
+      if (!wallpaper || !isDownloaded || !window.electronAPI) {
+        setLocalImagePath(null);
+        return;
+      }
+
+      try {
+        const filename = getFilename(wallpaper.id);
+        const result = await window.electronAPI.checkWallpaperExists(filename);
+        if (result.exists) {
+          // Use API route to serve local file instead of file:// URL
+          const localUrl = `/api/wallhaven/local/${filename}`;
+          setLocalImagePath(localUrl);
+        } else {
+          setLocalImagePath(null);
+        }
+      } catch (error) {
+        console.error("Error checking local file:", error);
+        setLocalImagePath(null);
+      }
+    };
+
+    checkLocalFile();
+  }, [wallpaper, isDownloaded]);
+
+  // Early return after all hooks have been called
+  if (!isOpen || !wallpaper) return null;
 
   const handleDownload = async () => {
     if (!window.electronAPI) {
       // Fallback for browser environment
       const link = document.createElement("a");
       link.href = wallpaper.fullRes;
-      link.download = getFilename(wallpaper.title);
+      link.download = getFilename(wallpaper.id);
       link.target = "_blank";
       document.body.appendChild(link);
       link.click();
@@ -60,17 +77,19 @@ export function WallpaperModal({
     try {
       const result = await window.electronAPI.downloadWallpaper(
         wallpaper.fullRes,
-        getFilename(wallpaper.title)
+        getFilename(wallpaper.id)
       );
 
       if (result.success) {
         // Show success notification
         console.log("Download completed:", result.path);
         console.log("Wallpaper saved to Pictures/Wallpapers folder");
-        // You could add a toast notification here
+        // Set local image path using API route
+        const localUrl = `/api/wallhaven/local/${getFilename(wallpaper.id)}`;
+        setLocalImagePath(localUrl);
+        onDownloadComplete(wallpaper.id);
       } else {
         console.error("Download failed:", result.error);
-        // You could add an error notification here
       }
     } catch (error) {
       console.error("Download error:", error);
@@ -90,7 +109,7 @@ export function WallpaperModal({
     try {
       const result = await window.electronAPI.setWallpaper(
         wallpaper.fullRes,
-        getFilename(wallpaper.title)
+        getFilename(wallpaper.id)
       );
 
       if (result.success) {
@@ -98,11 +117,15 @@ export function WallpaperModal({
         console.log(
           "Wallpaper saved to Pictures/Wallpapers folder and set as desktop background"
         );
-        // You could add a success notification here
+        // Set local image path using API route if it was downloaded
+        if (!localImagePath) {
+          const localUrl = `/api/wallhaven/local/${getFilename(wallpaper.id)}`;
+          setLocalImagePath(localUrl);
+          onDownloadComplete(wallpaper.id);
+        }
         onClose(); // Close modal on success
       } else {
         console.error("Failed to set wallpaper:", result.error);
-        // You could add an error notification here
       }
     } catch (error) {
       console.error("Set wallpaper error:", error);
@@ -113,8 +136,12 @@ export function WallpaperModal({
 
   const handleFavorite = () => {
     setIsFavorited(!isFavorited);
-    console.log("Favorited:", wallpaper.title);
+    console.log("Favorited:", wallpaper.id);
   };
+
+  // Use local image if available, otherwise use online version
+  const displayImageSrc = localImagePath || wallpaper.fullRes;
+  const isUsingLocalImage = !!localImagePath;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -125,32 +152,41 @@ export function WallpaperModal({
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-4xl bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden">
+      <div className="relative w-full max-w-6xl bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden">
         {/* Close Button */}
         <Button
           variant="ghost"
           size="icon"
           className="absolute top-4 right-4 z-10 bg-black/20 hover:bg-black/40 text-white rounded-full"
           onClick={onClose}
+          title="Close modal"
         >
           <X className="w-5 h-5" />
         </Button>
 
-        {/* Image */}
+        {/* High Quality Image */}
         <div className="relative">
           <img
-            src={wallpaper.preview}
-            alt={wallpaper.title}
-            className="w-full h-[70vh] object-cover"
+            src={displayImageSrc}
+            alt={`Wallpaper ${wallpaper.id}`}
+            className="w-full h-[80vh] object-contain bg-black"
+            loading="lazy"
           />
+
+          {/* Local File Indicator */}
+          {isUsingLocalImage && (
+            <div className="absolute top-4 left-4 bg-green-500/90 backdrop-blur-sm text-white text-sm font-medium px-3 py-1 rounded-full flex items-center space-x-2">
+              <div className="w-2 h-2 bg-white rounded-full"></div>
+              <span>Local File</span>
+            </div>
+          )}
 
           {/* Bottom Overlay with Info and Actions */}
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-6">
             <div className="flex items-end justify-between">
-              {/* Title and Basic Info */}
+              {/* Wallpaper Info */}
               <div className="text-white">
-                <h2 className="text-2xl font-bold mb-2">{wallpaper.title}</h2>
-                <div className="flex items-center space-x-4 text-sm opacity-90">
+                <div className="flex items-center space-x-4 text-sm opacity-90 mb-2">
                   <span>{wallpaper.resolution}</span>
                   <span>•</span>
                   <span>{wallpaper.size}</span>
@@ -159,7 +195,48 @@ export function WallpaperModal({
                     <Star className="w-4 h-4 fill-current text-yellow-400" />
                     <span>{wallpaper.rating}</span>
                   </div>
+                  {wallpaper.views && (
+                    <>
+                      <span>•</span>
+                      <span>{wallpaper.views.toLocaleString()} views</span>
+                    </>
+                  )}
                 </div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs text-white/60">
+                    ID: {wallpaper.id}
+                  </span>
+                  <span className="text-white/40">•</span>
+                  <span className="text-xs text-white/60">
+                    by {wallpaper.author}
+                  </span>
+                  {wallpaper.source && (
+                    <>
+                      <span className="text-white/40">•</span>
+                      <span className="text-xs text-white/60 capitalize">
+                        {wallpaper.source}
+                      </span>
+                    </>
+                  )}
+                  {isDownloaded && (
+                    <>
+                      <span className="text-white/40">•</span>
+                      <span className="text-xs text-green-400">Downloaded</span>
+                    </>
+                  )}
+                </div>
+                {wallpaper.tags && wallpaper.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {wallpaper.tags.slice(0, 8).map((tag, index) => (
+                      <span
+                        key={index}
+                        className="px-2 py-1 text-xs bg-white/20 rounded-full text-white/80"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Action Buttons */}
@@ -180,20 +257,23 @@ export function WallpaperModal({
                   {isFavorited ? "Favorited" : "Favorite"}
                 </Button>
 
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleDownload}
-                  disabled={isDownloading}
-                  className="bg-white/20 backdrop-blur-sm border-white/30 text-white hover:bg-white/30 disabled:opacity-50"
-                >
-                  {isDownloading ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Download className="w-4 h-4 mr-2" />
-                  )}
-                  {isDownloading ? "Downloading..." : "Download"}
-                </Button>
+                {/* Only show download button if not already downloaded */}
+                {!isDownloaded && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleDownload}
+                    disabled={isDownloading}
+                    className="bg-white/20 backdrop-blur-sm border-white/30 text-white hover:bg-white/30 disabled:opacity-50"
+                  >
+                    {isDownloading ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Download className="w-4 h-4 mr-2" />
+                    )}
+                    {isDownloading ? "Downloading..." : "Download"}
+                  </Button>
+                )}
 
                 <Button
                   size="sm"
