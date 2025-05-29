@@ -36,7 +36,7 @@
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
+    --background: 222.2 84% 4.9% ;
     --foreground: 210 40% 98%;
 
     --card: 222.2 84% 4.9%;
@@ -71,7 +71,7 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    /* @apply bg-background text-foreground; */
   }
 }
 
@@ -105,7 +105,7 @@
   }
 
   /* Windows 11 Acrylic/Backdrop blur effect */
-  .acrylic {
+  /* .acrylic {
     background: rgba(255, 255, 255, 0.7);
     backdrop-filter: blur(30px);
     -webkit-backdrop-filter: blur(30px);
@@ -117,7 +117,7 @@
     backdrop-filter: blur(30px);
     -webkit-backdrop-filter: blur(30px);
     border: 1px solid rgba(255, 255, 255, 0.1);
-  }
+  } */
 
   /* Modern shadow styles */
   .shadow-3xl {

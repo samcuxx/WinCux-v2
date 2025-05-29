@@ -47,7 +47,7 @@ export function TopBar({ title }: TopBarProps) {
 
   return (
     <div
-      className="flex items-center justify-end h-12 px-6  "
+      className="flex items-center justify-end h-12 px-6  bg-background/80"
       style={{ WebkitAppRegion: "drag" } as any}
     >
    

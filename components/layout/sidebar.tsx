@@ -17,13 +17,13 @@ const navigation = [
     name: "Wallpapers",
     href: "/wallpapers",
     icon: Image,
-    gradient: "from-green-500 to-blue-500",
+    gradient: "from-blue-600 to-purple-600",
   },
   {
     name: "Rainmeter",
     href: "/rainmeter",
     icon: Gauge,
-    gradient: "from-purple-500 to-pink-500",
+    gradient: "from-green-600 to-blue-600",
   },
   {
     name: "Settings",
@@ -37,7 +37,7 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <div className="w-64 bg-white/70 dark:bg-gray-950/70 backdrop-blur-sm border-r border-gray-200/50 dark:border-gray-800/50 flex flex-col">
+    <div className="w-64   border-rflex flex-col">
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-2">
         {navigation.map((item) => {
@@ -52,7 +52,7 @@ export function Sidebar() {
                 "flex items-center space-x-3 px-4 py-2 rounded-full transition-all duration-200 group",
                 isActive
                   ? "bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/50 dark:to-purple-950/50 text-blue-700 dark:text-blue-300"
-                  : "hover:bg-gray-100/50 dark:hover:bg-gray-800/50 text-gray-700 dark:text-gray-300"
+                  : "hover:bg-gray-100/50 dark:hover:bg-gray-800/50 text-white dark:text-gray-300"
               )}
             >
               <div
@@ -69,7 +69,7 @@ export function Sidebar() {
                     "w-5 h-5 transition-colors duration-200",
                     isActive
                       ? "text-white"
-                      : "text-gray-600 dark:text-gray-400 group-hover:text-white"
+                      : "text-white dark:text-gray-400 group-hover:text-white"
                   )}
                 />
               </div>
