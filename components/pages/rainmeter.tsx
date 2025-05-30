@@ -28,14 +28,12 @@ import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { RainmeterSkin } from "@/types/rainmeter";
 import { useRainmeterSkins } from "@/hooks/use-rainmeter-skins";
-import { useRainmeterToasts } from "@/hooks/use-rainmeter-toasts";
 import { rainmeterSkinsAPI } from "@/lib/services/rainmeter-skins-api";
-import { rainmeterStorage } from "@/lib/services/rainmeter-storage";
 import { SkinHeader } from "@/components/rainmeter/skin-header";
 import { SkinSearchFilters } from "@/components/rainmeter/skin-search-filters";
 import { SkinGrid } from "@/components/rainmeter/skin-grid";
 import { SkinModal } from "@/components/ui/skin-modal";
-import { SkinConfigModal } from "@/components/ui/skin-config-modal";
+import { useRainmeterToasts } from "@/hooks/use-rainmeter-toasts";
 import { RainmeterToastNotifications } from "@/components/rainmeter/rainmeter-toast-notifications";
 
 export function RainmeterPage() {
@@ -57,10 +55,18 @@ export function RainmeterPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedSkin, setSelectedSkin] = useState<RainmeterSkin | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [installedSkins, setInstalledSkins] = useState<Set<string>>(new Set());
+  const [downloadedSkins, setDownloadedSkins] = useState<Set<string>>(
+    new Set()
+  );
   const [categories, setCategories] = useState<string[]>(["All"]);
   const [showCacheStats, setShowCacheStats] = useState(false);
+  const [downloadingItems, setDownloadingItems] = useState<Set<string>>(
+    new Set()
+  );
+  const [installingItems, setInstallingItems] = useState<Set<string>>(
+    new Set()
+  );
 
   // Use the skins hook
   const {
@@ -85,13 +91,20 @@ export function RainmeterPage() {
   });
 
   // Use toast notifications
-  const { toasts, removeToast, updateToast, skinToasts } = useRainmeterToasts();
+  const { toasts, skinToasts, updateToast, removeToast, addToast } =
+    useRainmeterToasts();
 
   // Check if Rainmeter is installed when component mounts
   useEffect(() => {
     checkRainmeterInstallation();
-    loadInstalledSkinsFromStorage();
   }, []);
+
+  // Load installed skins when Rainmeter is detected
+  useEffect(() => {
+    if (rainmeterStatus === "installed") {
+      loadInstalledSkins();
+    }
+  }, [rainmeterStatus, skins]);
 
   // Load categories when component mounts
   useEffect(() => {
@@ -107,61 +120,14 @@ export function RainmeterPage() {
     loadCategories();
   }, []);
 
-  // Load installed skins from localStorage
-  const loadInstalledSkinsFromStorage = () => {
-    const installedSkinIds = rainmeterStorage.getInstalledSkinIds();
-    setInstalledSkins(installedSkinIds);
-  };
-
-  // Set up Electron API listeners
+  // Live search with debounce
   useEffect(() => {
-    if (typeof window.electronAPI !== "undefined") {
-      // Download progress listener
-      const downloadProgressListener = (
-        _event: any,
-        data: { skinId: string; progress: number }
-      ) => {
-        // Progress updates are handled by toast system
-      };
+    const timeoutId = setTimeout(() => {
+      handleSearch();
+    }, 300); // 300ms debounce
 
-      // Install progress listener
-      const installProgressListener = (
-        _event: any,
-        data: { skinId: string; progress: number; message: string }
-      ) => {
-        // Progress updates are handled by toast system
-      };
-
-      // Toggle progress listener
-      const toggleProgressListener = (
-        _event: any,
-        data: { skinId: string; message: string }
-      ) => {
-        // Progress updates are handled by toast system
-      };
-
-      // Add listeners
-      window.electronAPI.on("skin-download-progress", downloadProgressListener);
-      window.electronAPI.on("skin-install-progress", installProgressListener);
-      window.electronAPI.on("skin-toggle-progress", toggleProgressListener);
-
-      // Cleanup
-      return () => {
-        window.electronAPI.removeListener(
-          "skin-download-progress",
-          downloadProgressListener
-        );
-        window.electronAPI.removeListener(
-          "skin-install-progress",
-          installProgressListener
-        );
-        window.electronAPI.removeListener(
-          "skin-toggle-progress",
-          toggleProgressListener
-        );
-      };
-    }
-  }, []);
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, selectedCategory, sortBy]);
 
   // Function to check if Rainmeter is installed
   const checkRainmeterInstallation = async () => {
@@ -196,6 +162,146 @@ export function RainmeterPage() {
     } catch (error) {
       console.error("Error checking Rainmeter installation:", error);
       setRainmeterStatus("not_installed");
+    }
+  };
+
+  // Function to load installed skins from Rainmeter
+  const loadInstalledSkins = async () => {
+    try {
+      if (typeof window.electronAPI !== "undefined") {
+        // Load installed skins
+        const installedResult =
+          await window.electronAPI.getInstalledRainmeterSkins();
+
+        if (installedResult.success && installedResult.skins) {
+          console.log(
+            `Found ${installedResult.skins.length} installed skins:`,
+            installedResult.skins.map((s) => ({
+              name: s.name,
+              skinId: s.skinId,
+            }))
+          );
+
+          // Create a mapping of installed skins to our CSV skin IDs
+          const installedIds = new Set<string>();
+
+          // For each installed skin, try to match it with our CSV data
+          installedResult.skins.forEach((installedSkin: any) => {
+            // Check if any of our loaded skins match this installed skin
+            const matchingSkin = skins.find((csvSkin) => {
+              // Try multiple matching strategies
+              return (
+                // Exact ID match
+                csvSkin.id === installedSkin.skinId ||
+                // Exact name match
+                csvSkin.name.toLowerCase() ===
+                  installedSkin.name.toLowerCase() ||
+                // Partial name match
+                csvSkin.name
+                  .toLowerCase()
+                  .includes(installedSkin.name.toLowerCase()) ||
+                installedSkin.name
+                  .toLowerCase()
+                  .includes(csvSkin.name.toLowerCase()) ||
+                // Generated ID match
+                csvSkin.name.toLowerCase().replace(/\s+/g, "-") ===
+                  installedSkin.skinId
+              );
+            });
+
+            if (matchingSkin) {
+              installedIds.add(matchingSkin.id);
+              console.log(
+                `Matched installed skin "${installedSkin.name}" to CSV skin "${matchingSkin.name}" (ID: ${matchingSkin.id})`
+              );
+            } else {
+              console.log(
+                `No CSV match found for installed skin: "${installedSkin.name}" (ID: ${installedSkin.skinId})`
+              );
+            }
+          });
+
+          setInstalledSkins(installedIds);
+          console.log(
+            `Mapped ${installedIds.size} installed skins to CSV data`
+          );
+        }
+
+        // Load downloaded skins (.rmskin files)
+        await loadDownloadedSkins();
+      }
+    } catch (error) {
+      console.error("Failed to load installed skins:", error);
+    }
+  };
+
+  // Function to detect downloaded .rmskin files
+  const loadDownloadedSkins = async () => {
+    try {
+      if (typeof window.electronAPI !== "undefined") {
+        // We need to implement a new API to list downloaded .rmskin files
+        // For now, we'll track downloads in localStorage as a fallback
+        const downloadedSkinsData = localStorage.getItem(
+          "rainmeter-downloaded-skins"
+        );
+        if (downloadedSkinsData) {
+          const downloadedIds = JSON.parse(downloadedSkinsData);
+          setDownloadedSkins(new Set(downloadedIds));
+          console.log(
+            `Loaded ${downloadedIds.length} downloaded skins from localStorage`
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load downloaded skins:", error);
+    }
+  };
+
+  // Function to save downloaded skins to localStorage
+  const saveDownloadedSkin = (skinId: string) => {
+    try {
+      const downloadedSkinsData = localStorage.getItem(
+        "rainmeter-downloaded-skins"
+      );
+      const downloadedIds = downloadedSkinsData
+        ? JSON.parse(downloadedSkinsData)
+        : [];
+
+      if (!downloadedIds.includes(skinId)) {
+        downloadedIds.push(skinId);
+        localStorage.setItem(
+          "rainmeter-downloaded-skins",
+          JSON.stringify(downloadedIds)
+        );
+        setDownloadedSkins((prev) => new Set(Array.from(prev).concat(skinId)));
+      }
+    } catch (error) {
+      console.error("Failed to save downloaded skin:", error);
+    }
+  };
+
+  // Function to remove downloaded skin from localStorage
+  const removeDownloadedSkin = (skinId: string) => {
+    try {
+      const downloadedSkinsData = localStorage.getItem(
+        "rainmeter-downloaded-skins"
+      );
+      if (downloadedSkinsData) {
+        const downloadedIds = JSON.parse(downloadedSkinsData);
+        const updatedIds = downloadedIds.filter((id: string) => id !== skinId);
+        localStorage.setItem(
+          "rainmeter-downloaded-skins",
+          JSON.stringify(updatedIds)
+        );
+
+        setDownloadedSkins((prev) => {
+          const newSet = new Set(Array.from(prev));
+          newSet.delete(skinId);
+          return newSet;
+        });
+      }
+    } catch (error) {
+      console.error("Failed to remove downloaded skin:", error);
     }
   };
 
@@ -330,11 +436,7 @@ export function RainmeterPage() {
 
   const handleCategoryChange = async (category: string) => {
     setSelectedCategory(category);
-    await search({
-      query: searchQuery || undefined,
-      category: category === "All" ? undefined : category,
-      sorting: sortBy,
-    });
+    // Live search useEffect will handle the search automatically
   };
 
   const handleSortChange = async (sorting: string) => {
@@ -345,11 +447,7 @@ export function RainmeterPage() {
       | "last_updated"
       | "file_size";
     setSortBy(typedSorting);
-    await search({
-      query: searchQuery || undefined,
-      category: selectedCategory === "All" ? undefined : selectedCategory,
-      sorting: typedSorting,
-    });
+    // Live search useEffect will handle the search automatically
   };
 
   const handleSkinClick = (skin: RainmeterSkin) => {
@@ -360,46 +458,58 @@ export function RainmeterPage() {
   const handleDownload = async (skin: RainmeterSkin, e: React.MouseEvent) => {
     e.stopPropagation();
 
-    if (typeof window.electronAPI === "undefined") {
-      skinToasts.error("download", skin.name, "Electron API not available");
-      return;
-    }
-
-    const toastId = skinToasts.downloading(skin.name);
+    if (downloadingItems.has(skin.id)) return;
 
     try {
-      // Generate filename for the skin
-      const filename = `${skin.name.replace(/[^a-zA-Z0-9]/g, "_")}.rmskin`;
+      setDownloadingItems((prev) => new Set(Array.from(prev).concat(skin.id)));
+      const toastId = skinToasts.downloading(skin.name);
 
-      const result = await window.electronAPI.downloadRainmeterSkin(
-        skin.download_url,
-        filename,
-        skin.id
-      );
+      if (typeof window.electronAPI !== "undefined") {
+        const filename = `${skin.name.replace(
+          /[^a-zA-Z0-9]/g,
+          "_"
+        )}_Rainmeter_Skin.rmskin`;
+        const result = await window.electronAPI.downloadRainmeterSkin(
+          skin.download_url,
+          filename,
+          skin.id
+        );
 
-      if (result.success) {
-        updateToast(toastId, {
-          type: "success",
-          message: `Downloaded ${skin.name}`,
-          subMessage: result.alreadyExists
-            ? "File already existed"
-            : "Skin package saved",
-          duration: 5000,
-        });
-      } else {
-        updateToast(toastId, {
-          type: "error",
-          message: `Failed to download ${skin.name}`,
-          subMessage: result.error,
-          duration: 8000,
-        });
+        if (result.success) {
+          updateToast(toastId, {
+            type: "success",
+            message: `Downloaded ${skin.name}`,
+            subMessage: result.alreadyExists
+              ? "File already exists"
+              : "Download completed",
+            duration: 3000,
+          });
+
+          // Mark as downloaded
+          setDownloadedSkins(
+            (prev) => new Set(Array.from(prev).concat(skin.id))
+          );
+          saveDownloadedSkin(skin.id);
+        } else {
+          updateToast(toastId, {
+            type: "error",
+            message: `Failed to download ${skin.name}`,
+            subMessage: result.error,
+            duration: 8000,
+          });
+        }
       }
     } catch (error) {
-      updateToast(toastId, {
-        type: "error",
-        message: `Failed to download ${skin.name}`,
-        subMessage: error instanceof Error ? error.message : "Unknown error",
-        duration: 8000,
+      skinToasts.error(
+        "download",
+        skin.name,
+        error instanceof Error ? error.message : "Unknown error"
+      );
+    } finally {
+      setDownloadingItems((prev) => {
+        const newSet = new Set(Array.from(prev));
+        newSet.delete(skin.id);
+        return newSet;
       });
     }
   };
@@ -407,80 +517,79 @@ export function RainmeterPage() {
   const handleInstall = async (skin: RainmeterSkin, e: React.MouseEvent) => {
     e.stopPropagation();
 
-    if (typeof window.electronAPI === "undefined") {
-      skinToasts.error("install", skin.name, "Electron API not available");
-      return;
-    }
-
-    // First download the skin if needed
-    const filename = `${skin.name.replace(/[^a-zA-Z0-9]/g, "_")}.rmskin`;
-    const downloadToastId = skinToasts.downloading(skin.name);
+    if (installingItems.has(skin.id)) return;
 
     try {
-      // Download the skin
-      const downloadResult = await window.electronAPI.downloadRainmeterSkin(
-        skin.download_url,
-        filename,
-        skin.id
-      );
+      setInstallingItems((prev) => new Set(Array.from(prev).concat(skin.id)));
 
-      if (!downloadResult.success) {
-        updateToast(downloadToastId, {
-          type: "error",
-          message: `Failed to download ${skin.name}`,
-          subMessage: downloadResult.error,
-          duration: 8000,
-        });
-        return;
-      }
+      // First download if not already downloaded
+      const filename = `${skin.name.replace(
+        /[^a-zA-Z0-9]/g,
+        "_"
+      )}_Rainmeter_Skin.rmskin`;
+      const toastId = skinToasts.installing(skin.name);
 
-      // Update download toast to installing
-      updateToast(downloadToastId, {
-        type: "loading",
-        message: `Installing ${skin.name}`,
-        subMessage: "Setting up skin files...",
-      });
+      if (typeof window.electronAPI !== "undefined") {
+        // Download first
+        const downloadResult = await window.electronAPI.downloadRainmeterSkin(
+          skin.download_url,
+          filename,
+          skin.id
+        );
 
-      // Install the skin
-      const installResult = await window.electronAPI.installRainmeterSkin(
-        downloadResult.path,
-        skin.id,
-        skin.name
-      );
+        if (!downloadResult.success) {
+          updateToast(toastId, {
+            type: "error",
+            message: `Failed to download ${skin.name}`,
+            subMessage: downloadResult.error,
+            duration: 8000,
+          });
+          return;
+        }
 
-      if (installResult.success) {
-        // Add to local storage
-        rainmeterStorage.addInstalledSkin({
-          skinId: skin.id,
-          isInstalled: true,
-          isEnabled: false,
-          installPath: installResult.path,
-          version: skin.version,
-        });
+        // Then install
+        const installResult = await window.electronAPI.installRainmeterSkin(
+          downloadResult.path || "",
+          skin.id,
+          skin.name
+        );
 
-        // Update UI state
-        setInstalledSkins((prev) => new Set([...prev, skin.id]));
+        if (installResult.success) {
+          updateToast(toastId, {
+            type: "success",
+            message: `Installed ${skin.name}`,
+            subMessage: "Skin is ready to use",
+            duration: 3000,
+          });
 
-        updateToast(downloadToastId, {
-          type: "success",
-          message: `Installed ${skin.name}`,
-          subMessage: "Skin is ready to use",
-          duration: 5000,
-        });
-      } else {
-        updateToast(downloadToastId, {
-          type: "error",
-          message: `Failed to install ${skin.name}`,
-          subMessage: installResult.error,
-          duration: 8000,
-        });
+          // Mark as downloaded and installed
+          setDownloadedSkins(
+            (prev) => new Set(Array.from(prev).concat(skin.id))
+          );
+          setInstalledSkins(
+            (prev) => new Set(Array.from(prev).concat(skin.id))
+          );
+          saveDownloadedSkin(skin.id);
+        } else {
+          updateToast(toastId, {
+            type: "error",
+            message: `Failed to install ${skin.name}`,
+            subMessage: installResult.error,
+            duration: 8000,
+          });
+        }
       }
     } catch (error) {
-      updateToast(downloadToastId, {
-        type: "error",
-        message: `Failed to install ${skin.name}`,
-        subMessage: error instanceof Error ? error.message : "Unknown error",
-        duration: 8000,
+      skinToasts.error(
+        "install",
+        skin.name,
+        error instanceof Error ? error.message : "Unknown error"
+      );
+    } finally {
+      setInstallingItems((prev) => {
+        const newSet = new Set(Array.from(prev));
+        newSet.delete(skin.id);
+        return newSet;
       });
     }
   };
@@ -491,120 +600,280 @@ export function RainmeterPage() {
     setIsModalOpen(true);
   };
 
-  const handleModalDownload = (skin: RainmeterSkin) => {
-    // Create a mock event for the download handler
+  const handleModalDownload = async (skin: RainmeterSkin) => {
+    // Create a mock event object
     const mockEvent = { stopPropagation: () => {} } as React.MouseEvent;
-    handleDownload(skin, mockEvent);
+    await handleDownload(skin, mockEvent);
   };
 
-  const handleModalInstall = (skin: RainmeterSkin) => {
-    // Create a mock event for the install handler
+  const handleModalInstall = async (skin: RainmeterSkin) => {
+    // Create a mock event object
     const mockEvent = { stopPropagation: () => {} } as React.MouseEvent;
-    handleInstall(skin, mockEvent);
+    await handleInstall(skin, mockEvent);
   };
 
-  const handleModalEnable = async (skin: RainmeterSkin) => {
-    if (typeof window.electronAPI === "undefined") {
-      skinToasts.error("enable", skin.name, "Electron API not available");
-      return;
-    }
-
-    const toastId = skinToasts.enabling(skin.name);
+  const handleEnable = async (skin: RainmeterSkin, e: React.MouseEvent) => {
+    e.stopPropagation();
 
     try {
-      const isCurrentlyEnabled =
-        installedSkins.has(skin.id) &&
-        rainmeterStorage.getSkinStatus(skin.id)?.isEnabled;
+      const toastId = skinToasts.enabling(skin.name);
 
-      const result = await window.electronAPI.toggleRainmeterSkin(
-        skin.id,
-        skin.name,
-        "", // skin path - would need to be retrieved from storage
-        isCurrentlyEnabled
-      );
+      if (typeof window.electronAPI !== "undefined") {
+        const result = await window.electronAPI.toggleRainmeterSkin(
+          skin.id,
+          skin.name,
+          "",
+          false // enable the skin
+        );
 
-      if (result.success) {
-        // Update local storage
-        rainmeterStorage.updateSkinEnabledStatus(skin.id, !isCurrentlyEnabled);
-
-        updateToast(toastId, {
-          type: "success",
-          message: `${!isCurrentlyEnabled ? "Enabled" : "Disabled"} ${
-            skin.name
-          }`,
-          subMessage: !isCurrentlyEnabled
-            ? "Skin is now active"
-            : "Skin has been deactivated",
-          duration: 5000,
-        });
-      } else {
-        updateToast(toastId, {
-          type: "error",
-          message: `Failed to toggle ${skin.name}`,
-          subMessage: error instanceof Error ? error.message : "Unknown error",
-          duration: 8000,
-        });
+        if (result.success) {
+          updateToast(toastId, {
+            type: "success",
+            message: `Enabled ${skin.name}`,
+            subMessage: "Skin is now active on your desktop",
+            duration: 3000,
+          });
+        } else {
+          updateToast(toastId, {
+            type: "error",
+            message: `Failed to enable ${skin.name}`,
+            subMessage: result.error,
+            duration: 8000,
+          });
+        }
       }
     } catch (error) {
-      updateToast(toastId, {
-        type: "error",
-        message: `Failed to toggle ${skin.name}`,
-        subMessage: error instanceof Error ? error.message : "Unknown error",
-        duration: 8000,
-      });
+      skinToasts.error(
+        "enable",
+        skin.name,
+        error instanceof Error ? error.message : "Unknown error"
+      );
     }
   };
 
-  const handleModalConfigure = (skin: RainmeterSkin) => {
-    setSelectedSkin(skin);
-    setIsModalOpen(false);
-    setIsConfigModalOpen(true);
+  const handleConfigure = async (skin: RainmeterSkin, e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    try {
+      const toastId = skinToasts.configuring(skin.name);
+
+      if (typeof window.electronAPI !== "undefined") {
+        const result = await window.electronAPI.configureRainmeterSkin(
+          skin.id,
+          skin.name,
+          ""
+        );
+
+        if (result.success) {
+          updateToast(toastId, {
+            type: "success",
+            message: `Configuration opened for ${skin.name}`,
+            subMessage: "Rainmeter settings dialog launched",
+            duration: 3000,
+          });
+        } else {
+          updateToast(toastId, {
+            type: "error",
+            message: `Failed to configure ${skin.name}`,
+            subMessage: result.error,
+            duration: 8000,
+          });
+        }
+      }
+    } catch (error) {
+      skinToasts.error(
+        "configure",
+        skin.name,
+        error instanceof Error ? error.message : "Unknown error"
+      );
+    }
   };
 
-  const handleConfigSave = (configuration: any) => {
-    rainmeterStorage.saveSkinConfiguration(configuration);
-    skinToasts.configuring(configuration.skinId);
-    setIsConfigModalOpen(false);
+  const handleUninstall = async (skin: RainmeterSkin, e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    try {
+      const toastId = addToast(`Uninstalling ${skin.name}`, {
+        type: "loading",
+        subMessage: "Removing skin files...",
+      });
+
+      if (typeof window.electronAPI !== "undefined") {
+        // First, get the list of installed skins to find the correct one
+        const installedResult =
+          await window.electronAPI.getInstalledRainmeterSkins();
+
+        if (installedResult.success && installedResult.skins) {
+          console.log(`Looking for skin "${skin.name}" with ID "${skin.id}"`);
+          console.log(
+            "Available installed skins:",
+            installedResult.skins.map((s) => ({
+              name: s.name,
+              skinId: s.skinId,
+              path: s.path,
+            }))
+          );
+
+          // Try multiple matching strategies
+          let installedSkin = null;
+
+          // 1. Try exact skin ID match
+          installedSkin = installedResult.skins.find(
+            (s: any) => s.skinId === skin.id
+          );
+
+          // 2. Try exact name match
+          if (!installedSkin) {
+            installedSkin = installedResult.skins.find(
+              (s: any) => s.name.toLowerCase() === skin.name.toLowerCase()
+            );
+          }
+
+          // 3. Try partial name match
+          if (!installedSkin) {
+            installedSkin = installedResult.skins.find(
+              (s: any) =>
+                s.name.toLowerCase().includes(skin.name.toLowerCase()) ||
+                skin.name.toLowerCase().includes(s.name.toLowerCase())
+            );
+          }
+
+          // 4. Try generated ID matching
+          if (!installedSkin) {
+            const normalizedSkinName = skin.name
+              .toLowerCase()
+              .replace(/\s+/g, "-");
+            installedSkin = installedResult.skins.find(
+              (s: any) => s.skinId === normalizedSkinName
+            );
+          }
+
+          if (installedSkin) {
+            console.log(`Found matching skin:`, installedSkin);
+
+            const result = await window.electronAPI.uninstallRainmeterSkin(
+              installedSkin.skinId,
+              installedSkin.name,
+              installedSkin.path || ""
+            );
+
+            if (result.success) {
+              updateToast(toastId, {
+                type: "success",
+                message: `Uninstalled ${skin.name}`,
+                subMessage: "Skin has been removed from your system",
+                duration: 3000,
+              });
+
+              // Remove from installed skins
+              setInstalledSkins((prev) => {
+                const newSet = new Set(Array.from(prev));
+                newSet.delete(skin.id);
+                return newSet;
+              });
+
+              // Reload installed skins to ensure consistency
+              await loadInstalledSkins();
+            } else {
+              updateToast(toastId, {
+                type: "error",
+                message: `Failed to uninstall ${skin.name}`,
+                subMessage: result.error || "Unknown error",
+                duration: 8000,
+              });
+            }
+          } else {
+            // Try fallback uninstall with just the skin name
+            console.log(
+              `No exact match found, trying fallback uninstall for: ${skin.name}`
+            );
+
+            const result = await window.electronAPI.uninstallRainmeterSkin(
+              skin.id,
+              skin.name,
+              "" // Empty path - let the backend find it
+            );
+
+            if (result.success) {
+              updateToast(toastId, {
+                type: "success",
+                message: `Uninstalled ${skin.name}`,
+                subMessage: "Skin has been removed from your system",
+                duration: 3000,
+              });
+
+              // Remove from installed skins
+              setInstalledSkins((prev) => {
+                const newSet = new Set(Array.from(prev));
+                newSet.delete(skin.id);
+                return newSet;
+              });
+
+              // Reload installed skins to ensure consistency
+              await loadInstalledSkins();
+            } else {
+              updateToast(toastId, {
+                type: "error",
+                message: `Cannot find installed skin "${skin.name}"`,
+                subMessage:
+                  "The skin may not be properly installed or may have been moved",
+                duration: 8000,
+              });
+            }
+          }
+        } else {
+          updateToast(toastId, {
+            type: "error",
+            message: `Failed to get installed skins list`,
+            subMessage: "Cannot proceed with uninstall",
+            duration: 8000,
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Uninstall error:", error);
+      skinToasts.error(
+        "uninstall",
+        skin.name,
+        error instanceof Error ? error.message : "Unknown error"
+      );
+    }
   };
 
   const handleClearCache = () => {
     clearSkinsCache();
   };
 
+  // Modal handlers that match the expected signatures
+  const handleModalConfigure = async (skin: RainmeterSkin) => {
+    // Create a mock event object
+    const mockEvent = { stopPropagation: () => {} } as React.MouseEvent;
+    await handleConfigure(skin, mockEvent);
+  };
+
   return (
     <div className="space-y-6">
-      {/* Rainmeter Installation Status */}
-      <Card className="border-0 shadow-xl bg-white/80 dark:bg-gray-950/80 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            {rainmeterStatus === "checking" ? (
-              <>
-                <div className="w-3 h-3 rounded-full bg-blue-500 animate-pulse"></div>
-                <span>Checking Rainmeter Installation...</span>
-              </>
-            ) : rainmeterStatus === "installed" ? (
-              <>
-                <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                <span>Rainmeter Detected</span>
-              </>
-            ) : (
-              <>
-                <div className="w-3 h-3 rounded-full bg-orange-500"></div>
-                <span>Rainmeter Not Detected</span>
-              </>
-            )}
-          </CardTitle>
-          <CardDescription>
-            {rainmeterStatus === "checking"
-              ? "Checking if Rainmeter is installed on your system..."
-              : rainmeterStatus === "installed"
-              ? "Rainmeter is installed and ready to use. Browse and install skins below."
-              : "Rainmeter is not installed on your system. Click the button below to install it automatically using winget."}
-          </CardDescription>
-        </CardHeader>
+      {/* Toast Notifications */}
+      <RainmeterToastNotifications
+        toasts={toasts}
+        onRemoveToast={removeToast}
+      />
 
-        {rainmeterStatus === "not_installed" &&
-          installationState === "idle" && (
+      {/* Rainmeter Installation Status - Only show if not installed */}
+      {rainmeterStatus === "not_installed" && (
+        <Card className="border-0 shadow-xl bg-white/80 dark:bg-gray-950/80 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <div className="w-3 h-3 rounded-full bg-orange-500"></div>
+              <span>Rainmeter Not Detected</span>
+            </CardTitle>
+            <CardDescription>
+              Rainmeter is not installed on your system. Click the button below
+              to install it automatically using winget.
+            </CardDescription>
+          </CardHeader>
+
+          {installationState === "idle" && (
             <CardContent>
               <div className="flex items-center space-x-4">
                 <Button
@@ -624,38 +893,94 @@ export function RainmeterPage() {
             </CardContent>
           )}
 
-        {installationState !== "idle" && (
-          <CardContent>{renderInstallationStatus()}</CardContent>
-        )}
-      </Card>
+          {installationState !== "idle" && (
+            <CardContent>{renderInstallationStatus()}</CardContent>
+          )}
+        </Card>
+      )}
 
       {/* Skin Management Section */}
       {rainmeterStatus === "installed" && (
         <div className="space-y-6">
-          {/* Header */}
-          <SkinHeader
-            isLoading={isLoading}
-            error={skinsError}
-            totalCount={totalCount}
-            isFromCache={isFromCache}
-            cacheAge={cacheAge}
-            viewMode={viewMode}
-            showCacheStats={showCacheStats}
-            onRefresh={refresh}
-            onToggleCacheStats={() => setShowCacheStats(!showCacheStats)}
-            onViewModeChange={setViewMode}
-          />
+          {/* Header with Status Indicator */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Rainmeter Skins
+              </h1>
+              <div className="flex items-center space-x-2 px-3 py-1 rounded-full bg-green-100 dark:bg-green-900/20">
+                <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                <span className="text-sm font-medium text-green-700 dark:text-green-300">
+                  Active
+                </span>
+              </div>
+            </div>
 
-          {/* Search and Filters */}
-          <SkinSearchFilters
-            searchQuery={searchQuery}
-            sortBy={sortBy}
-            isLoading={isLoading}
-            onSearchQueryChange={setSearchQuery}
-            onSearch={handleSearch}
-            onSortChange={handleSortChange}
-            onKeyPress={(e) => e.key === "Enter" && handleSearch()}
-          />
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={refresh}
+                disabled={isLoading}
+                className="flex items-center space-x-2"
+              >
+                <RefreshCw
+                  className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
+                />
+                <span>Refresh</span>
+              </Button>
+            </div>
+          </div>
+
+          <p className="text-muted-foreground">
+            Discover and install beautiful Rainmeter skins for your desktop
+          </p>
+
+          {/* Search and Sort on Same Line */}
+          <div className="flex items-center space-x-4">
+            <div className="flex-1 relative">
+              <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                <svg
+                  className="w-4 h-4 text-muted-foreground"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+              </div>
+              <input
+                type="text"
+                placeholder="Search skins by name, developer, tags, or description..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={isLoading}
+              />
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-muted-foreground">Sort by:</span>
+              <select
+                value={sortBy}
+                onChange={(e) => handleSortChange(e.target.value)}
+                disabled={isLoading}
+                aria-label="Sort skins by"
+                className="px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="rating">Rating</option>
+                <option value="downloads">Downloads</option>
+                <option value="name">Name</option>
+                <option value="last_updated">Updated</option>
+                <option value="file_size">Size</option>
+              </select>
+            </div>
+          </div>
 
           {/* Categories */}
           <div className="flex flex-wrap gap-2">
@@ -691,10 +1016,13 @@ export function RainmeterPage() {
             skins={skins}
             viewMode={viewMode}
             installedSkins={installedSkins}
+            downloadedSkins={downloadedSkins}
             onSkinClick={handleSkinClick}
             onDownload={handleDownload}
             onInstall={handleInstall}
             onPreview={handlePreview}
+            onConfigure={handleConfigure}
+            onUninstall={handleUninstall}
           />
 
           {/* Load More Button */}
@@ -779,27 +1107,8 @@ export function RainmeterPage() {
         isInstalled={selectedSkin ? installedSkins.has(selectedSkin.id) : false}
         onDownload={handleModalDownload}
         onInstall={handleModalInstall}
-        onEnable={handleModalEnable}
+        onEnable={() => {}}
         onConfigure={handleModalConfigure}
-      />
-
-      {/* Skin Configuration Modal */}
-      <SkinConfigModal
-        skin={selectedSkin}
-        isOpen={isConfigModalOpen}
-        onClose={() => setIsConfigModalOpen(false)}
-        onSave={handleConfigSave}
-        currentConfig={
-          selectedSkin
-            ? rainmeterStorage.getSkinConfiguration(selectedSkin.id)
-            : null
-        }
-      />
-
-      {/* Toast Notifications */}
-      <RainmeterToastNotifications
-        toasts={toasts}
-        onRemoveToast={removeToast}
       />
     </div>
   );

@@ -950,6 +950,10 @@ const createWindow = () => {
     "uninstall-rainmeter-skin",
     async (event, { skinId, skinName, skinPath }) => {
       try {
+        console.log(
+          `Attempting to uninstall skin: ID=${skinId}, Name=${skinName}, Path=${skinPath}`
+        );
+
         if (process.platform !== "win32") {
           return {
             success: false,
@@ -959,12 +963,72 @@ const createWindow = () => {
           };
         }
 
+        // If skinPath is not provided or doesn't exist, try to find the skin
+        let actualSkinPath = skinPath;
+        const skinsBasePath = path.join(
+          os.homedir(),
+          "Documents",
+          "Rainmeter",
+          "Skins"
+        );
+
+        if (!actualSkinPath || !fs.existsSync(actualSkinPath)) {
+          console.log("Skin path not found, searching for skin...");
+
+          // Try to find the skin by name or a close match
+          if (fs.existsSync(skinsBasePath)) {
+            const skinFolders = fs
+              .readdirSync(skinsBasePath, { withFileTypes: true })
+              .filter((dirent) => dirent.isDirectory())
+              .map((dirent) => dirent.name);
+
+            // Look for exact match first
+            let foundFolder = skinFolders.find(
+              (folder) => folder.toLowerCase() === skinName.toLowerCase()
+            );
+
+            // If no exact match, try partial matches
+            if (!foundFolder) {
+              foundFolder = skinFolders.find(
+                (folder) =>
+                  folder.toLowerCase().includes(skinName.toLowerCase()) ||
+                  skinName.toLowerCase().includes(folder.toLowerCase())
+              );
+            }
+
+            // Try matching by generated ID
+            if (!foundFolder) {
+              const expectedId = skinName.toLowerCase().replace(/\s+/g, "-");
+              foundFolder = skinFolders.find(
+                (folder) =>
+                  folder.toLowerCase().replace(/\s+/g, "-") === expectedId ||
+                  folder.toLowerCase().replace(/\s+/g, "-") === skinId
+              );
+            }
+
+            if (foundFolder) {
+              actualSkinPath = path.join(skinsBasePath, foundFolder);
+              console.log(`Found skin at: ${actualSkinPath}`);
+            }
+          }
+        }
+
+        if (!actualSkinPath || !fs.existsSync(actualSkinPath)) {
+          return {
+            success: false,
+            error: `Cannot find skin files for "${skinName}". The skin may not be installed or may have been moved.`,
+            skinId,
+          };
+        }
+
         // Send progress update
-        event.sender.send("skin-uninstall-progress", {
-          skinId,
-          progress: 20,
-          message: `Preparing to uninstall ${skinName}...`,
-        });
+        if (event && event.sender) {
+          event.sender.send("skin-uninstall-progress", {
+            skinId,
+            progress: 20,
+            message: `Preparing to uninstall ${skinName}...`,
+          });
+        }
 
         // First, disable the skin if it's active
         const rainmeterPaths = [
@@ -987,31 +1051,48 @@ const createWindow = () => {
         }
 
         if (rainmeterExe) {
-          // Deactivate the skin first
+          console.log(`Deactivating skin using: ${rainmeterExe}`);
+          // Deactivate the skin first - try both the folder name and skin name
+          const folderName = path.basename(actualSkinPath);
+
           await new Promise((resolve) => {
-            exec(`"${rainmeterExe}" !DeactivateConfig "${skinName}"`, () => {
-              resolve();
+            exec(`"${rainmeterExe}" !DeactivateConfig "${folderName}"`, () => {
+              // Also try with original skin name if different
+              if (folderName !== skinName) {
+                exec(
+                  `"${rainmeterExe}" !DeactivateConfig "${skinName}"`,
+                  () => {
+                    resolve();
+                  }
+                );
+              } else {
+                resolve();
+              }
             });
           });
         }
 
-        event.sender.send("skin-uninstall-progress", {
-          skinId,
-          progress: 50,
-          message: `Removing skin files...`,
-        });
-
-        // Remove the skin folder
-        if (fs.existsSync(skinPath)) {
-          await removeDirectory(skinPath);
+        if (event && event.sender) {
+          event.sender.send("skin-uninstall-progress", {
+            skinId,
+            progress: 50,
+            message: `Removing skin files...`,
+          });
         }
 
-        event.sender.send("skin-uninstall-progress", {
-          skinId,
-          progress: 100,
-          message: `Uninstallation complete!`,
-        });
+        // Remove the skin folder
+        console.log(`Removing directory: ${actualSkinPath}`);
+        await removeDirectory(actualSkinPath);
 
+        if (event && event.sender) {
+          event.sender.send("skin-uninstall-progress", {
+            skinId,
+            progress: 100,
+            message: `Uninstallation complete!`,
+          });
+        }
+
+        console.log(`Successfully uninstalled skin: ${skinName}`);
         return {
           success: true,
           skinId,
@@ -1019,7 +1100,11 @@ const createWindow = () => {
         };
       } catch (error) {
         console.error("Uninstall skin function error:", error);
-        return { success: false, error: error.message, skinId };
+        return {
+          success: false,
+          error: `Failed to uninstall skin: ${error.message}`,
+          skinId,
+        };
       }
     }
   );

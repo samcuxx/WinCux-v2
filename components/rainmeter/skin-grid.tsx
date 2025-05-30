@@ -19,20 +19,26 @@ interface SkinGridProps {
   skins: RainmeterSkin[];
   viewMode: "grid" | "list";
   installedSkins: Set<string>;
+  downloadedSkins: Set<string>;
   onSkinClick: (skin: RainmeterSkin) => void;
   onDownload: (skin: RainmeterSkin, e: React.MouseEvent) => void;
   onInstall: (skin: RainmeterSkin, e: React.MouseEvent) => void;
   onPreview: (skin: RainmeterSkin, e: React.MouseEvent) => void;
+  onConfigure: (skin: RainmeterSkin, e: React.MouseEvent) => void;
+  onUninstall: (skin: RainmeterSkin, e: React.MouseEvent) => void;
 }
 
 export function SkinGrid({
   skins,
   viewMode,
   installedSkins,
+  downloadedSkins,
   onSkinClick,
   onDownload,
   onInstall,
   onPreview,
+  onConfigure,
+  onUninstall,
 }: SkinGridProps) {
   const formatFileSize = (sizeStr: string): string => {
     if (!sizeStr) return "Unknown";
@@ -58,12 +64,17 @@ export function SkinGrid({
       <div className="space-y-3">
         {skins.map((skin) => {
           const isInstalled = installedSkins.has(skin.id);
+          const isDownloaded = downloadedSkins.has(skin.id);
 
           return (
             <Card
               key={skin.id}
-              className="hover:shadow-lg transition-all duration-300 cursor-pointer border-0 bg-white/60 dark:bg-gray-950/60 backdrop-blur-sm"
-              onClick={() => onSkinClick(skin)}
+              className={`hover:shadow-lg transition-all duration-300 cursor-pointer bg-white/60 dark:bg-gray-950/60 backdrop-blur-sm ${
+                isDownloaded && !isInstalled
+                  ? "border-2 border-blue-400 dark:border-blue-500"
+                  : "border-0"
+              }`}
+              onClick={() => !isInstalled && onSkinClick(skin)}
             >
               <CardContent className="p-4">
                 <div className="flex items-center space-x-4">
@@ -92,28 +103,7 @@ export function SkinGrid({
                         <h3 className="font-semibold text-lg truncate">
                           {skin.name}
                         </h3>
-                        <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-                          {skin.description}
-                        </p>
-
-                        <div className="flex items-center space-x-4 mt-2 text-xs text-muted-foreground">
-                          <div className="flex items-center space-x-1">
-                            <User className="w-3 h-3" />
-                            <span>{skin.developer || "Unknown"}</span>
-                          </div>
-
-                          <div className="flex items-center space-x-1">
-                            <Star className="w-3 h-3" />
-                            <span>{formatRating(skin.rating, skin.votes)}</span>
-                          </div>
-
-                          <div className="flex items-center space-x-1">
-                            <Download className="w-3 h-3" />
-                            <span>
-                              {skin.downloads.toLocaleString()} downloads
-                            </span>
-                          </div>
-
+                        <div className="flex items-center space-x-4 mt-2 text-sm text-muted-foreground">
                           <div className="flex items-center space-x-1">
                             <FileText className="w-3 h-3" />
                             <span>{formatFileSize(skin.file_size)}</span>
@@ -123,26 +113,43 @@ export function SkinGrid({
 
                       {/* Actions */}
                       <div className="flex items-center space-x-2 ml-4">
-                        <Badge variant="secondary" className="text-xs">
-                          {skin.category}
-                        </Badge>
+                        {isInstalled && (
+                          <Badge
+                            variant="default"
+                            className="text-xs bg-orange-500 text-white"
+                          >
+                            Installed
+                          </Badge>
+                        )}
 
                         {isInstalled ? (
+                          <div className="flex space-x-1">
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={(e) => onUninstall(skin, e)}
+                            >
+                              <Download className="w-3 h-3 mr-1" />
+                              Uninstall
+                            </Button>
+                          </div>
+                        ) : isDownloaded ? (
                           <div className="flex space-x-1">
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={(e) => onPreview(skin, e)}
                             >
-                              <Play className="w-3 h-3 mr-1" />
-                              Enable
+                              <Eye className="w-3 h-3 mr-1" />
+                              Preview
                             </Button>
                             <Button
                               size="sm"
-                              variant="outline"
-                              onClick={(e) => onPreview(skin, e)}
+                              className="bg-gradient-to-r from-green-500 to-blue-500 text-white border-0"
+                              onClick={(e) => onInstall(skin, e)}
                             >
-                              <Settings className="w-3 h-3" />
+                              <Download className="w-3 h-3 mr-1" />
+                              Install
                             </Button>
                           </div>
                         ) : (
@@ -158,10 +165,10 @@ export function SkinGrid({
                             <Button
                               size="sm"
                               className="bg-gradient-to-r from-blue-500 to-purple-500 text-white border-0"
-                              onClick={(e) => onInstall(skin, e)}
+                              onClick={(e) => onDownload(skin, e)}
                             >
                               <Download className="w-3 h-3 mr-1" />
-                              Install
+                              Download
                             </Button>
                           </div>
                         )}
@@ -182,12 +189,17 @@ export function SkinGrid({
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {skins.map((skin) => {
         const isInstalled = installedSkins.has(skin.id);
+        const isDownloaded = downloadedSkins.has(skin.id);
 
         return (
           <Card
             key={skin.id}
-            className="group hover:shadow-xl transition-all duration-300 cursor-pointer border-0 bg-white/60 dark:bg-gray-950/60 backdrop-blur-sm overflow-hidden"
-            onClick={() => onSkinClick(skin)}
+            className={`group hover:shadow-xl transition-all duration-300 cursor-pointer bg-white/60 dark:bg-gray-950/60 backdrop-blur-sm overflow-hidden ${
+              isDownloaded && !isInstalled
+                ? "border-2 border-blue-400 dark:border-blue-500"
+                : "border-0"
+            }`}
+            onClick={() => !isInstalled && onSkinClick(skin)}
           >
             <CardContent className="p-0">
               {/* Thumbnail */}
@@ -205,19 +217,11 @@ export function SkinGrid({
                   </div>
                 )}
 
-                {/* Category Badge */}
-                <Badge
-                  variant="secondary"
-                  className="absolute top-2 left-2 text-xs bg-white/90 dark:bg-gray-900/90"
-                >
-                  {skin.category}
-                </Badge>
-
                 {/* Install Status */}
                 {isInstalled && (
                   <Badge
                     variant="default"
-                    className="absolute top-2 right-2 text-xs bg-green-500 text-white"
+                    className="absolute top-2 right-2 text-xs bg-orange-500 text-white"
                   >
                     Installed
                   </Badge>
@@ -225,80 +229,48 @@ export function SkinGrid({
               </div>
 
               {/* Content */}
-              <div className="p-4">
+              <div className="px-4 py-2">
                 <h3 className="font-semibold text-lg line-clamp-1 mb-2">
                   {skin.name}
                 </h3>
-                <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                  {skin.description}
-                </p>
 
-                {/* Metadata */}
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <div className="flex items-center space-x-1">
-                      <User className="w-3 h-3" />
-                      <span className="truncate">
-                        {skin.developer || "Unknown"}
-                      </span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <FileText className="w-3 h-3" />
-                      <span>{formatFileSize(skin.file_size)}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <div className="flex items-center space-x-1">
-                      <Star className="w-3 h-3" />
-                      <span>{formatRating(skin.rating, skin.votes)}</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <Download className="w-3 h-3" />
-                      <span>{skin.downloads.toLocaleString()}</span>
-                    </div>
+                {/* File Size */}
+                <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
+                  <div className="flex items-center space-x-1">
+                    <FileText className="w-3 h-3" />
+                    <span>{formatFileSize(skin.file_size)}</span>
                   </div>
                 </div>
-
-                {/* Tags */}
-                {skin.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mb-4">
-                    {skin.tags.slice(0, 3).map((tag, index) => (
-                      <Badge
-                        key={index}
-                        variant="outline"
-                        className="text-xs px-2 py-0"
-                      >
-                        {tag}
-                      </Badge>
-                    ))}
-                    {skin.tags.length > 3 && (
-                      <Badge variant="outline" className="text-xs px-2 py-0">
-                        +{skin.tags.length - 3}
-                      </Badge>
-                    )}
-                  </div>
-                )}
 
                 {/* Actions */}
                 <div className="flex space-x-2">
                   {isInstalled ? (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      className="flex-1"
+                      onClick={(e) => onUninstall(skin, e)}
+                    >
+                      <Download className="w-3 h-3 mr-1" />
+                      Uninstall
+                    </Button>
+                  ) : isDownloaded ? (
                     <>
                       <Button
                         size="sm"
                         variant="outline"
-                        className="flex-1"
                         onClick={(e) => onPreview(skin, e)}
                       >
-                        <Play className="w-3 h-3 mr-1" />
-                        Enable
+                        <Eye className="w-3 h-3 mr-1" />
+                        Preview
                       </Button>
                       <Button
                         size="sm"
-                        variant="outline"
-                        onClick={(e) => onPreview(skin, e)}
+                        className="flex-1 bg-gradient-to-r from-green-500 to-blue-500 text-white border-0"
+                        onClick={(e) => onInstall(skin, e)}
                       >
-                        <Settings className="w-3 h-3" />
+                        <Download className="w-3 h-3 mr-1" />
+                        Install
                       </Button>
                     </>
                   ) : (
@@ -314,10 +286,10 @@ export function SkinGrid({
                       <Button
                         size="sm"
                         className="flex-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white border-0"
-                        onClick={(e) => onInstall(skin, e)}
+                        onClick={(e) => onDownload(skin, e)}
                       >
                         <Download className="w-3 h-3 mr-1" />
-                        Install
+                        Download
                       </Button>
                     </>
                   )}

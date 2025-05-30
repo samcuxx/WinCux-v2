@@ -26,11 +26,19 @@ class WallpaperCacheService {
   private readonly MAX_WALLPAPERS_PER_CACHE = 200; // Maximum wallpapers per query cache
 
   constructor() {
-    this.initializeCache();
+    // Only initialize cache on client side
+    if (typeof window !== "undefined") {
+      this.initializeCache();
+    }
   }
 
   private initializeCache(): void {
     try {
+      // Check if we're on the client side
+      if (typeof window === "undefined") {
+        return;
+      }
+
       const metadata = this.getMetadata();
       if (!metadata || metadata.version !== this.CACHE_VERSION) {
         this.clearAllCache();
@@ -48,6 +56,9 @@ class WallpaperCacheService {
 
   private getMetadata(): CacheMetadata | null {
     try {
+      if (typeof window === "undefined") {
+        return null;
+      }
       const metadata = localStorage.getItem(this.METADATA_KEY);
       return metadata ? JSON.parse(metadata) : null;
     } catch (error) {
@@ -58,6 +69,9 @@ class WallpaperCacheService {
 
   private setMetadata(metadata: CacheMetadata): void {
     try {
+      if (typeof window === "undefined") {
+        return;
+      }
       localStorage.setItem(this.METADATA_KEY, JSON.stringify(metadata));
     } catch (error) {
       console.warn("Failed to set cache metadata:", error);
@@ -86,6 +100,10 @@ class WallpaperCacheService {
 
   private cleanupOldEntries(): void {
     try {
+      if (typeof window === "undefined") {
+        return;
+      }
+
       const keys = Object.keys(localStorage);
       const cacheKeys = keys.filter((key) => key.startsWith(this.CACHE_PREFIX));
 
@@ -136,6 +154,10 @@ class WallpaperCacheService {
     hasNextPage: boolean
   ): void {
     try {
+      if (typeof window === "undefined") {
+        return;
+      }
+
       this.cleanupOldEntries();
 
       const cacheKey = this.generateCacheKey(query, category, sorting, page);
@@ -200,6 +222,10 @@ class WallpaperCacheService {
     page: number
   ): CacheEntry | null {
     try {
+      if (typeof window === "undefined") {
+        return null;
+      }
+
       const cacheKey = this.generateCacheKey(query, category, sorting, page);
       const cached = localStorage.getItem(cacheKey);
 
