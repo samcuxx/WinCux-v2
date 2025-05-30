@@ -59,6 +59,124 @@ const createWindow = () => {
     return win.isMaximized();
   });
 
+  // Wallhaven API Handlers
+
+  // Search wallpapers
+  ipcMain.handle("wallhaven-search", async (event, params = {}) => {
+    try {
+      const searchParams = {
+        ...WALLHAVEN_CONFIG.DEFAULT_PARAMS,
+        ...params,
+      };
+
+      // Build query string
+      const queryParams = new URLSearchParams();
+      Object.entries(searchParams).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, value.toString());
+        }
+      });
+
+      // Add API key if available
+      if (WALLHAVEN_CONFIG.API_KEY) {
+        queryParams.append("apikey", WALLHAVEN_CONFIG.API_KEY);
+      }
+
+      const url = `${WALLHAVEN_CONFIG.BASE_URL}${
+        WALLHAVEN_CONFIG.ENDPOINTS.SEARCH
+      }?${queryParams.toString()}`;
+      console.log("Wallhaven API request:", url);
+
+      const response = await makeHttpRequest(url);
+      return response;
+    } catch (error) {
+      console.error("Wallhaven search error:", error);
+      throw error;
+    }
+  });
+
+  // Get wallpaper by ID
+  ipcMain.handle("wallhaven-wallpaper", async (event, id) => {
+    try {
+      const queryParams = new URLSearchParams();
+      if (WALLHAVEN_CONFIG.API_KEY) {
+        queryParams.append("apikey", WALLHAVEN_CONFIG.API_KEY);
+      }
+
+      const url = `${WALLHAVEN_CONFIG.BASE_URL}${
+        WALLHAVEN_CONFIG.ENDPOINTS.WALLPAPER
+      }/${id}?${queryParams.toString()}`;
+      console.log("Wallhaven wallpaper request:", url);
+
+      const response = await makeHttpRequest(url);
+      return response;
+    } catch (error) {
+      console.error("Wallhaven wallpaper error:", error);
+      throw error;
+    }
+  });
+
+  // Get tag info
+  ipcMain.handle("wallhaven-tag", async (event, tagId) => {
+    try {
+      const queryParams = new URLSearchParams();
+      if (WALLHAVEN_CONFIG.API_KEY) {
+        queryParams.append("apikey", WALLHAVEN_CONFIG.API_KEY);
+      }
+
+      const url = `${WALLHAVEN_CONFIG.BASE_URL}${
+        WALLHAVEN_CONFIG.ENDPOINTS.TAG
+      }/${tagId}?${queryParams.toString()}`;
+      console.log("Wallhaven tag request:", url);
+
+      const response = await makeHttpRequest(url);
+      return response;
+    } catch (error) {
+      console.error("Wallhaven tag error:", error);
+      throw error;
+    }
+  });
+
+  // Get user settings (requires API key)
+  ipcMain.handle("wallhaven-settings", async (event) => {
+    try {
+      if (!WALLHAVEN_CONFIG.API_KEY) {
+        throw new Error("API key required for settings");
+      }
+
+      const queryParams = new URLSearchParams();
+      queryParams.append("apikey", WALLHAVEN_CONFIG.API_KEY);
+
+      const url = `${WALLHAVEN_CONFIG.BASE_URL}${
+        WALLHAVEN_CONFIG.ENDPOINTS.SETTINGS
+      }?${queryParams.toString()}`;
+      console.log("Wallhaven settings request:", url);
+
+      const response = await makeHttpRequest(url);
+      return response;
+    } catch (error) {
+      console.error("Wallhaven settings error:", error);
+      throw error;
+    }
+  });
+
+  // Test API configuration
+  ipcMain.handle("wallhaven-test", async (event) => {
+    try {
+      return {
+        config: {
+          baseUrl: WALLHAVEN_CONFIG.BASE_URL,
+          hasApiKey: !!WALLHAVEN_CONFIG.API_KEY,
+          apiKeyLength: WALLHAVEN_CONFIG.API_KEY?.length || 0,
+        },
+        status: "ready",
+      };
+    } catch (error) {
+      console.error("Wallhaven test error:", error);
+      throw error;
+    }
+  });
+
   // Download wallpaper functionality
   ipcMain.handle("download-wallpaper", async (event, { url, filename }) => {
     try {
@@ -1222,4 +1340,71 @@ async function removeDirectory(dirPath) {
 
     fs.rmdirSync(dirPath);
   }
+}
+
+// Wallhaven API Configuration
+const WALLHAVEN_CONFIG = {
+  BASE_URL: "https://wallhaven.cc/api/v1",
+  API_KEY: "6hD9gTaTNnsq9bWXPbyjugN0QSrT76hi",
+  ENDPOINTS: {
+    SEARCH: "/search",
+    WALLPAPER: "/w",
+    TAG: "/tag",
+    COLLECTIONS: "/collections",
+    SETTINGS: "/settings",
+  },
+  DEFAULT_PARAMS: {
+    PER_PAGE: 24,
+    CATEGORIES: "100",
+    PURITY: "100",
+    SORTING: "date_added",
+    ORDER: "desc",
+  },
+  RATE_LIMIT: 45,
+};
+
+// Helper function to make HTTP requests
+function makeHttpRequest(url, options = {}) {
+  return new Promise((resolve, reject) => {
+    const urlObj = new URL(url);
+    const requestOptions = {
+      hostname: urlObj.hostname,
+      port: urlObj.port || (urlObj.protocol === "https:" ? 443 : 80),
+      path: urlObj.pathname + urlObj.search,
+      method: options.method || "GET",
+      headers: {
+        Accept: "application/json",
+        "User-Agent": "Desktop Pro/1.0.0",
+        ...options.headers,
+      },
+    };
+
+    const req = https.request(requestOptions, (res) => {
+      let data = "";
+
+      res.on("data", (chunk) => {
+        data += chunk;
+      });
+
+      res.on("end", () => {
+        try {
+          const jsonData = JSON.parse(data);
+          resolve(jsonData);
+        } catch (error) {
+          reject(new Error("Invalid JSON response"));
+        }
+      });
+    });
+
+    req.on("error", (error) => {
+      reject(error);
+    });
+
+    req.setTimeout(options.timeout || 10000, () => {
+      req.destroy();
+      reject(new Error("Request timeout"));
+    });
+
+    req.end();
+  });
 }

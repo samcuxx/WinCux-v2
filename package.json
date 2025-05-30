@@ -1,10 +1,10 @@
 {
-  "name": "electron-nextjs-tailwind-shadcn",
+  "name": "desktop-pro",
   "version": "1.0.0",
   "private": true,
   "main": "main/main.js",
   "author": "sample",
-  "description": "Electron + NextJS example project",
+  "description": "Desktop Pro - Professional Desktop Enhancement Application",
   "scripts": {
     "dev": "concurrently -n \"NEXT,ELECTRON\" -c \"yellow,blue\" --kill-others \"next dev\" \"electron .\"",
     "build": "next build && electron-builder",

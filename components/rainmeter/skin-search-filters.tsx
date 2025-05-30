@@ -108,7 +108,9 @@ export function SkinSearchFilters({
         {searchQuery && (
           <div className="flex items-center space-x-2 text-sm text-muted-foreground">
             <span>Searching for:</span>
-            <span className="font-medium text-foreground">"{searchQuery}"</span>
+            <span className="font-medium text-foreground">
+              &quot;{searchQuery}&quot;
+            </span>
             <Button
               variant="ghost"
               size="sm"

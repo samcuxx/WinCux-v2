@@ -1,5 +1,5 @@
 appId: "io.github.rbfraphael.electron-next"
-productName: "Electron Next.JS"
+productName: "Desktop Pro"
 copyright: "Copyright (c) 2023 RBFraphael"
 win:
   target: ["dir", "portable", "zip"]

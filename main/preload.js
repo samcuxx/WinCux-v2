@@ -60,4 +60,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // System utilities
   platform: process.platform,
   versions: process.versions,
+
+  // Wallhaven API
+  invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args),
+  wallhavenSearch: (params) => ipcRenderer.invoke("wallhaven-search", params),
+  wallhavenWallpaper: (id) => ipcRenderer.invoke("wallhaven-wallpaper", id),
+  wallhavenTag: (tagId) => ipcRenderer.invoke("wallhaven-tag", tagId),
+  wallhavenSettings: () => ipcRenderer.invoke("wallhaven-settings"),
+  wallhavenTest: () => ipcRenderer.invoke("wallhaven-test"),
 });

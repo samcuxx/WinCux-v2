@@ -287,7 +287,7 @@ class RainmeterSkinsAPI {
   async getCategories(): Promise<string[]> {
     try {
       const skins = await this.getAllSkins();
-      const categories = [...new Set(skins.map((skin) => skin.category))]
+      const categories = Array.from(new Set(skins.map((skin) => skin.category)))
         .filter(Boolean)
         .sort();
 

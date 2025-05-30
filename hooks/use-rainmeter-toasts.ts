@@ -32,7 +32,7 @@ export function useRainmeterToasts() {
       setToasts((prev) => [...prev, toast]);
 
       // Auto-remove non-loading toasts
-      if (toast.duration > 0) {
+      if (toast.duration && toast.duration > 0) {
         setTimeout(() => {
           removeToast(id);
         }, toast.duration);

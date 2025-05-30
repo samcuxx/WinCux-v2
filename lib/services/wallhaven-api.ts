@@ -20,8 +20,8 @@ export class WallhavenAPIService {
   private isProcessingQueue = false;
 
   constructor(apiKey?: string) {
-    // Use local API routes instead of direct Wallhaven API
-    this.baseUrl = "/api/wallhaven";
+    // Use IPC for Electron app
+    this.baseUrl = "wallhaven"; // IPC channel prefix
     this.apiKey = apiKey || WALLHAVEN_CONFIG.API_KEY;
   }
 
@@ -50,7 +50,33 @@ export class WallhavenAPIService {
   }
 
   /**
-   * Make HTTP request with rate limiting and error handling
+   * Get rate limit information
+   */
+  getRateLimit(): RateLimit | null {
+    return this.rateLimit;
+  }
+
+  /**
+   * Update rate limit from response headers
+   */
+  private updateRateLimit(headers?: Headers): void {
+    if (!headers) return;
+
+    const limit = headers.get("X-Ratelimit-Limit");
+    const remaining = headers.get("X-Ratelimit-Remaining");
+    const reset = headers.get("X-Ratelimit-Reset");
+
+    if (limit && remaining && reset) {
+      this.rateLimit = {
+        limit: parseInt(limit),
+        remaining: parseInt(remaining),
+        reset: parseInt(reset) * 1000,
+      };
+    }
+  }
+
+  /**
+   * Make IPC request with rate limiting and error handling
    */
   private async makeRequest<T>(
     endpoint: string,
@@ -60,67 +86,39 @@ export class WallhavenAPIService {
     return new Promise((resolve, reject) => {
       const executeRequest = async () => {
         try {
-          // Construct the full URL to our API route
-          const url = new URL(
-            `${this.baseUrl}${endpoint}`,
-            window.location.origin
-          );
+          // Check if we're in Electron environment
+          if (typeof window !== "undefined" && (window as any).electronAPI) {
+            const electronAPI = (window as any).electronAPI;
+            let response;
 
-          // Add query parameters
-          Object.entries(params).forEach(([key, value]) => {
-            if (value !== undefined && value !== null) {
-              url.searchParams.append(key, value.toString());
+            // Map endpoints to specific API methods
+            switch (endpoint) {
+              case "/search":
+                response = await electronAPI.wallhavenSearch(params);
+                break;
+              case "/settings":
+                response = await electronAPI.wallhavenSettings();
+                break;
+              default:
+                if (endpoint.startsWith("/wallpaper/")) {
+                  const id = endpoint.split("/")[2];
+                  response = await electronAPI.wallhavenWallpaper(id);
+                } else if (endpoint.startsWith("/tag/")) {
+                  const tagId = endpoint.split("/")[2];
+                  response = await electronAPI.wallhavenTag(tagId);
+                } else {
+                  throw new Error(`Unsupported endpoint: ${endpoint}`);
+                }
             }
-          });
 
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => {
-            controller.abort();
-          }, options.timeout || 10000);
-
-          const response = await fetch(url.toString(), {
-            method: "GET",
-            headers: {
-              Accept: "application/json",
-            },
-            signal: controller.signal,
-          });
-
-          clearTimeout(timeoutId);
-
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new WallhavenAPIError(
-              errorData.error ||
-                `HTTP ${response.status}: ${response.statusText}`,
-              response.status
-            );
-          }
-
-          const data = await response.json();
-          resolve(data);
-        } catch (error) {
-          if (error instanceof WallhavenAPIError) {
-            reject(error);
-          } else if (
-            error &&
-            typeof error === "object" &&
-            "name" in error &&
-            error.name === "AbortError"
-          ) {
-            reject(new WallhavenAPIError("Request timeout", 408));
+            resolve(response);
           } else {
-            reject(
-              new WallhavenAPIError(
-                error &&
-                typeof error === "object" &&
-                "message" in error &&
-                typeof error.message === "string"
-                  ? error.message
-                  : "Network error occurred"
-              )
-            );
+            // Fallback for non-Electron environments (development)
+            reject(new Error("Electron API not available"));
           }
+        } catch (error: any) {
+          console.error(`API request failed for ${endpoint}:`, error);
+          reject(new WallhavenAPIError(error.message || "Request failed", 500));
         }
       };
 
@@ -327,13 +325,6 @@ export class WallhavenAPIService {
     const viewsScore = Math.min(wallpaper.views / 1000, 5);
     const favoritesScore = Math.min(wallpaper.favorites / 100, 5);
     return Math.round(((viewsScore + favoritesScore) / 2) * 10) / 10;
-  }
-
-  /**
-   * Get current rate limit status
-   */
-  getRateLimit(): RateLimit | null {
-    return this.rateLimit;
   }
 
   /**
