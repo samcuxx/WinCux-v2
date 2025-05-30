@@ -26,6 +26,79 @@ export interface ElectronAPI {
     filename: string
   ) => Promise<{ exists: boolean; path?: string | null; error?: string }>;
 
+  // Rainmeter Skin Management
+  downloadRainmeterSkin: (
+    url: string,
+    filename: string,
+    skinId: string
+  ) => Promise<{
+    success: boolean;
+    path?: string;
+    error?: string;
+    skinId: string;
+    alreadyExists?: boolean;
+  }>;
+
+  installRainmeterSkin: (
+    skinPath: string,
+    skinId: string,
+    skinName: string
+  ) => Promise<{
+    success: boolean;
+    path?: string;
+    error?: string;
+    skinId: string;
+    message?: string;
+  }>;
+
+  toggleRainmeterSkin: (
+    skinId: string,
+    skinName: string,
+    skinPath: string,
+    isEnabled: boolean
+  ) => Promise<{
+    success: boolean;
+    isEnabled?: boolean;
+    error?: string;
+    skinId: string;
+    message?: string;
+  }>;
+
+  configureRainmeterSkin: (
+    skinId: string,
+    skinName: string,
+    skinPath: string
+  ) => Promise<{
+    success: boolean;
+    error?: string;
+    skinId: string;
+    message?: string;
+  }>;
+
+  getInstalledRainmeterSkins: () => Promise<{
+    success: boolean;
+    error?: string;
+    skins: Array<{
+      skinId: string;
+      name: string;
+      path: string;
+      installedAt: string;
+      configFiles: string[];
+      size: number;
+    }>;
+  }>;
+
+  uninstallRainmeterSkin: (
+    skinId: string,
+    skinName: string,
+    skinPath: string
+  ) => Promise<{
+    success: boolean;
+    error?: string;
+    skinId: string;
+    message?: string;
+  }>;
+
   // System utilities
   platform: string;
   versions: {

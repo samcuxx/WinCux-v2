@@ -26,6 +26,17 @@ import {
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { RainmeterSkin } from "@/types/rainmeter";
+import { useRainmeterSkins } from "@/hooks/use-rainmeter-skins";
+import { useRainmeterToasts } from "@/hooks/use-rainmeter-toasts";
+import { rainmeterSkinsAPI } from "@/lib/services/rainmeter-skins-api";
+import { rainmeterStorage } from "@/lib/services/rainmeter-storage";
+import { SkinHeader } from "@/components/rainmeter/skin-header";
+import { SkinSearchFilters } from "@/components/rainmeter/skin-search-filters";
+import { SkinGrid } from "@/components/rainmeter/skin-grid";
+import { SkinModal } from "@/components/ui/skin-modal";
+import { SkinConfigModal } from "@/components/ui/skin-config-modal";
+import { RainmeterToastNotifications } from "@/components/rainmeter/rainmeter-toast-notifications";
 
 export function RainmeterPage() {
   const [rainmeterStatus, setRainmeterStatus] = useState<
@@ -37,9 +48,119 @@ export function RainmeterPage() {
   const [installProgress, setInstallProgress] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Skin management state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [sortBy, setSortBy] = useState<
+    "name" | "rating" | "downloads" | "last_updated" | "file_size"
+  >("rating");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [selectedSkin, setSelectedSkin] = useState<RainmeterSkin | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+  const [installedSkins, setInstalledSkins] = useState<Set<string>>(new Set());
+  const [categories, setCategories] = useState<string[]>(["All"]);
+  const [showCacheStats, setShowCacheStats] = useState(false);
+
+  // Use the skins hook
+  const {
+    skins,
+    isLoading,
+    error: skinsError,
+    totalCount,
+    hasNextPage,
+    refresh,
+    loadMore,
+    search,
+    clearCache: clearSkinsCache,
+    getCacheStats,
+    isFromCache,
+    cacheAge,
+    isLoadingMore,
+  } = useRainmeterSkins({
+    sorting: sortBy,
+    category: selectedCategory,
+    query: searchQuery,
+    autoLoad: true,
+  });
+
+  // Use toast notifications
+  const { toasts, removeToast, updateToast, skinToasts } = useRainmeterToasts();
+
   // Check if Rainmeter is installed when component mounts
   useEffect(() => {
     checkRainmeterInstallation();
+    loadInstalledSkinsFromStorage();
+  }, []);
+
+  // Load categories when component mounts
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const cats = await rainmeterSkinsAPI.getCategories();
+        setCategories(cats);
+      } catch (error) {
+        console.error("Failed to load categories:", error);
+      }
+    };
+
+    loadCategories();
+  }, []);
+
+  // Load installed skins from localStorage
+  const loadInstalledSkinsFromStorage = () => {
+    const installedSkinIds = rainmeterStorage.getInstalledSkinIds();
+    setInstalledSkins(installedSkinIds);
+  };
+
+  // Set up Electron API listeners
+  useEffect(() => {
+    if (typeof window.electronAPI !== "undefined") {
+      // Download progress listener
+      const downloadProgressListener = (
+        _event: any,
+        data: { skinId: string; progress: number }
+      ) => {
+        // Progress updates are handled by toast system
+      };
+
+      // Install progress listener
+      const installProgressListener = (
+        _event: any,
+        data: { skinId: string; progress: number; message: string }
+      ) => {
+        // Progress updates are handled by toast system
+      };
+
+      // Toggle progress listener
+      const toggleProgressListener = (
+        _event: any,
+        data: { skinId: string; message: string }
+      ) => {
+        // Progress updates are handled by toast system
+      };
+
+      // Add listeners
+      window.electronAPI.on("skin-download-progress", downloadProgressListener);
+      window.electronAPI.on("skin-install-progress", installProgressListener);
+      window.electronAPI.on("skin-toggle-progress", toggleProgressListener);
+
+      // Cleanup
+      return () => {
+        window.electronAPI.removeListener(
+          "skin-download-progress",
+          downloadProgressListener
+        );
+        window.electronAPI.removeListener(
+          "skin-install-progress",
+          installProgressListener
+        );
+        window.electronAPI.removeListener(
+          "skin-toggle-progress",
+          toggleProgressListener
+        );
+      };
+    }
   }, []);
 
   // Function to check if Rainmeter is installed
@@ -198,40 +319,261 @@ export function RainmeterPage() {
     }
   };
 
+  // Skin management handlers
+  const handleSearch = async () => {
+    await search({
+      query: searchQuery || undefined,
+      category: selectedCategory === "All" ? undefined : selectedCategory,
+      sorting: sortBy,
+    });
+  };
+
+  const handleCategoryChange = async (category: string) => {
+    setSelectedCategory(category);
+    await search({
+      query: searchQuery || undefined,
+      category: category === "All" ? undefined : category,
+      sorting: sortBy,
+    });
+  };
+
+  const handleSortChange = async (sorting: string) => {
+    const typedSorting = sorting as
+      | "name"
+      | "rating"
+      | "downloads"
+      | "last_updated"
+      | "file_size";
+    setSortBy(typedSorting);
+    await search({
+      query: searchQuery || undefined,
+      category: selectedCategory === "All" ? undefined : selectedCategory,
+      sorting: typedSorting,
+    });
+  };
+
+  const handleSkinClick = (skin: RainmeterSkin) => {
+    setSelectedSkin(skin);
+    setIsModalOpen(true);
+  };
+
+  const handleDownload = async (skin: RainmeterSkin, e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    if (typeof window.electronAPI === "undefined") {
+      skinToasts.error("download", skin.name, "Electron API not available");
+      return;
+    }
+
+    const toastId = skinToasts.downloading(skin.name);
+
+    try {
+      // Generate filename for the skin
+      const filename = `${skin.name.replace(/[^a-zA-Z0-9]/g, "_")}.rmskin`;
+
+      const result = await window.electronAPI.downloadRainmeterSkin(
+        skin.download_url,
+        filename,
+        skin.id
+      );
+
+      if (result.success) {
+        updateToast(toastId, {
+          type: "success",
+          message: `Downloaded ${skin.name}`,
+          subMessage: result.alreadyExists
+            ? "File already existed"
+            : "Skin package saved",
+          duration: 5000,
+        });
+      } else {
+        updateToast(toastId, {
+          type: "error",
+          message: `Failed to download ${skin.name}`,
+          subMessage: result.error,
+          duration: 8000,
+        });
+      }
+    } catch (error) {
+      updateToast(toastId, {
+        type: "error",
+        message: `Failed to download ${skin.name}`,
+        subMessage: error instanceof Error ? error.message : "Unknown error",
+        duration: 8000,
+      });
+    }
+  };
+
+  const handleInstall = async (skin: RainmeterSkin, e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    if (typeof window.electronAPI === "undefined") {
+      skinToasts.error("install", skin.name, "Electron API not available");
+      return;
+    }
+
+    // First download the skin if needed
+    const filename = `${skin.name.replace(/[^a-zA-Z0-9]/g, "_")}.rmskin`;
+    const downloadToastId = skinToasts.downloading(skin.name);
+
+    try {
+      // Download the skin
+      const downloadResult = await window.electronAPI.downloadRainmeterSkin(
+        skin.download_url,
+        filename,
+        skin.id
+      );
+
+      if (!downloadResult.success) {
+        updateToast(downloadToastId, {
+          type: "error",
+          message: `Failed to download ${skin.name}`,
+          subMessage: downloadResult.error,
+          duration: 8000,
+        });
+        return;
+      }
+
+      // Update download toast to installing
+      updateToast(downloadToastId, {
+        type: "loading",
+        message: `Installing ${skin.name}`,
+        subMessage: "Setting up skin files...",
+      });
+
+      // Install the skin
+      const installResult = await window.electronAPI.installRainmeterSkin(
+        downloadResult.path,
+        skin.id,
+        skin.name
+      );
+
+      if (installResult.success) {
+        // Add to local storage
+        rainmeterStorage.addInstalledSkin({
+          skinId: skin.id,
+          isInstalled: true,
+          isEnabled: false,
+          installPath: installResult.path,
+          version: skin.version,
+        });
+
+        // Update UI state
+        setInstalledSkins((prev) => new Set([...prev, skin.id]));
+
+        updateToast(downloadToastId, {
+          type: "success",
+          message: `Installed ${skin.name}`,
+          subMessage: "Skin is ready to use",
+          duration: 5000,
+        });
+      } else {
+        updateToast(downloadToastId, {
+          type: "error",
+          message: `Failed to install ${skin.name}`,
+          subMessage: installResult.error,
+          duration: 8000,
+        });
+      }
+    } catch (error) {
+      updateToast(downloadToastId, {
+        type: "error",
+        message: `Failed to install ${skin.name}`,
+        subMessage: error instanceof Error ? error.message : "Unknown error",
+        duration: 8000,
+      });
+    }
+  };
+
+  const handlePreview = (skin: RainmeterSkin, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedSkin(skin);
+    setIsModalOpen(true);
+  };
+
+  const handleModalDownload = (skin: RainmeterSkin) => {
+    // Create a mock event for the download handler
+    const mockEvent = { stopPropagation: () => {} } as React.MouseEvent;
+    handleDownload(skin, mockEvent);
+  };
+
+  const handleModalInstall = (skin: RainmeterSkin) => {
+    // Create a mock event for the install handler
+    const mockEvent = { stopPropagation: () => {} } as React.MouseEvent;
+    handleInstall(skin, mockEvent);
+  };
+
+  const handleModalEnable = async (skin: RainmeterSkin) => {
+    if (typeof window.electronAPI === "undefined") {
+      skinToasts.error("enable", skin.name, "Electron API not available");
+      return;
+    }
+
+    const toastId = skinToasts.enabling(skin.name);
+
+    try {
+      const isCurrentlyEnabled =
+        installedSkins.has(skin.id) &&
+        rainmeterStorage.getSkinStatus(skin.id)?.isEnabled;
+
+      const result = await window.electronAPI.toggleRainmeterSkin(
+        skin.id,
+        skin.name,
+        "", // skin path - would need to be retrieved from storage
+        isCurrentlyEnabled
+      );
+
+      if (result.success) {
+        // Update local storage
+        rainmeterStorage.updateSkinEnabledStatus(skin.id, !isCurrentlyEnabled);
+
+        updateToast(toastId, {
+          type: "success",
+          message: `${!isCurrentlyEnabled ? "Enabled" : "Disabled"} ${
+            skin.name
+          }`,
+          subMessage: !isCurrentlyEnabled
+            ? "Skin is now active"
+            : "Skin has been deactivated",
+          duration: 5000,
+        });
+      } else {
+        updateToast(toastId, {
+          type: "error",
+          message: `Failed to toggle ${skin.name}`,
+          subMessage: error instanceof Error ? error.message : "Unknown error",
+          duration: 8000,
+        });
+      }
+    } catch (error) {
+      updateToast(toastId, {
+        type: "error",
+        message: `Failed to toggle ${skin.name}`,
+        subMessage: error instanceof Error ? error.message : "Unknown error",
+        duration: 8000,
+      });
+    }
+  };
+
+  const handleModalConfigure = (skin: RainmeterSkin) => {
+    setSelectedSkin(skin);
+    setIsModalOpen(false);
+    setIsConfigModalOpen(true);
+  };
+
+  const handleConfigSave = (configuration: any) => {
+    rainmeterStorage.saveSkinConfiguration(configuration);
+    skinToasts.configuring(configuration.skinId);
+    setIsConfigModalOpen(false);
+  };
+
+  const handleClearCache = () => {
+    clearSkinsCache();
+  };
+
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
-            Rainmeter Manager
-          </h2>
-          <p className="text-muted-foreground mt-1">
-            Customize your desktop with powerful widgets and monitoring tools
-          </p>
-        </div>
-        {rainmeterStatus === "installed" ? (
-          <Button className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700">
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Check for Updates
-          </Button>
-        ) : (
-          <Button
-            className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
-            onClick={checkRainmeterInstallation}
-            disabled={rainmeterStatus === "checking"}
-          >
-            <RefreshCw
-              className={`w-4 h-4 mr-2 ${
-                rainmeterStatus === "checking" ? "animate-spin" : ""
-              }`}
-            />
-            Refresh Status
-          </Button>
-        )}
-      </div>
-
-      {/* Installation Status */}
+      {/* Rainmeter Installation Status */}
       <Card className="border-0 shadow-xl bg-white/80 dark:bg-gray-950/80 backdrop-blur-sm">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
@@ -256,7 +598,7 @@ export function RainmeterPage() {
             {rainmeterStatus === "checking"
               ? "Checking if Rainmeter is installed on your system..."
               : rainmeterStatus === "installed"
-              ? "Rainmeter is installed and ready to use. You can now install and manage skins."
+              ? "Rainmeter is installed and ready to use. Browse and install skins below."
               : "Rainmeter is not installed on your system. Click the button below to install it automatically using winget."}
           </CardDescription>
         </CardHeader>
@@ -287,120 +629,178 @@ export function RainmeterPage() {
         )}
       </Card>
 
-      {/* System Monitoring */}
+      {/* Skin Management Section */}
       {rainmeterStatus === "installed" && (
-        <div className="grid gap-6 md:grid-cols-3">
-          <Card className="border-0 bg-white/60 dark:bg-gray-950/60 backdrop-blur-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center space-x-2">
-                <Cpu className="w-4 h-4" />
-                <span>CPU Usage</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold mb-2">45%</div>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                <div
-                  className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full"
-                  style={{ width: "45%" }}
-                ></div>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="space-y-6">
+          {/* Header */}
+          <SkinHeader
+            isLoading={isLoading}
+            error={skinsError}
+            totalCount={totalCount}
+            isFromCache={isFromCache}
+            cacheAge={cacheAge}
+            viewMode={viewMode}
+            showCacheStats={showCacheStats}
+            onRefresh={refresh}
+            onToggleCacheStats={() => setShowCacheStats(!showCacheStats)}
+            onViewModeChange={setViewMode}
+          />
 
-          <Card className="border-0 bg-white/60 dark:bg-gray-950/60 backdrop-blur-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center space-x-2">
-                <MemoryStick className="w-4 h-4" />
-                <span>Memory</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold mb-2">8.2 GB</div>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                <div
-                  className="bg-gradient-to-r from-green-500 to-blue-500 h-2 rounded-full"
-                  style={{ width: "68%" }}
-                ></div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Search and Filters */}
+          <SkinSearchFilters
+            searchQuery={searchQuery}
+            sortBy={sortBy}
+            isLoading={isLoading}
+            onSearchQueryChange={setSearchQuery}
+            onSearch={handleSearch}
+            onSortChange={handleSortChange}
+            onKeyPress={(e) => e.key === "Enter" && handleSearch()}
+          />
 
-          <Card className="border-0 bg-white/60 dark:bg-gray-950/60 backdrop-blur-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center space-x-2">
-                <HardDrive className="w-4 h-4" />
-                <span>Storage</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold mb-2">256 GB</div>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                <div
-                  className="bg-gradient-to-r from-orange-500 to-red-500 h-2 rounded-full"
-                  style={{ width: "82%" }}
-                ></div>
+          {/* Categories */}
+          <div className="flex flex-wrap gap-2">
+            {categories.map((category) => (
+              <Button
+                key={category}
+                variant={selectedCategory === category ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleCategoryChange(category)}
+                disabled={isLoading}
+                className={
+                  selectedCategory === category
+                    ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white border-0"
+                    : ""
+                }
+              >
+                {category}
+              </Button>
+            ))}
+          </div>
+
+          {/* Results Count */}
+          <div className="flex items-center justify-between text-sm text-muted-foreground">
+            <span>
+              {skins.length} of {totalCount.toLocaleString()} skins
+              {selectedCategory !== "All" && ` in ${selectedCategory}`}
+              {searchQuery && ` matching "${searchQuery}"`}
+            </span>
+          </div>
+
+          {/* Skins Grid */}
+          <SkinGrid
+            skins={skins}
+            viewMode={viewMode}
+            installedSkins={installedSkins}
+            onSkinClick={handleSkinClick}
+            onDownload={handleDownload}
+            onInstall={handleInstall}
+            onPreview={handlePreview}
+          />
+
+          {/* Load More Button */}
+          {hasNextPage && (
+            <div className="flex justify-center">
+              <Button
+                variant="outline"
+                onClick={loadMore}
+                disabled={isLoadingMore}
+                className="px-8"
+              >
+                {isLoadingMore ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  "Load More Skins"
+                )}
+              </Button>
+            </div>
+          )}
+
+          {/* Loading State */}
+          {isLoading && skins.length === 0 && (
+            <div className="flex justify-center py-12">
+              <div className="text-center">
+                <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-500" />
+                <p className="text-muted-foreground">Loading skins...</p>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          )}
+
+          {/* Empty State */}
+          {!isLoading && skins.length === 0 && !skinsError && (
+            <div className="text-center py-12">
+              <Activity className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="text-lg font-semibold mb-2">No skins found</h3>
+              <p className="text-muted-foreground mb-4">
+                Try adjusting your search criteria or browse different
+                categories.
+              </p>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSearchQuery("");
+                  setSelectedCategory("All");
+                  handleSearch();
+                }}
+              >
+                Clear Filters
+              </Button>
+            </div>
+          )}
+
+          {/* Error State */}
+          {skinsError && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error Loading Skins</AlertTitle>
+              <AlertDescription>
+                {skinsError.message}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={refresh}
+                  className="mt-2"
+                >
+                  Try Again
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
         </div>
       )}
 
-      {/* Skin Collection */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xl font-semibold">Available Skins</h3>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={rainmeterStatus !== "installed"}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Custom Skin
-          </Button>
-        </div>
+      {/* Skin Preview Modal */}
+      <SkinModal
+        skin={selectedSkin}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        isInstalled={selectedSkin ? installedSkins.has(selectedSkin.id) : false}
+        onDownload={handleModalDownload}
+        onInstall={handleModalInstall}
+        onEnable={handleModalEnable}
+        onConfigure={handleModalConfigure}
+      />
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Card
-              key={i}
-              className={`border-0 backdrop-blur-sm transition-all duration-300 hover:shadow-xl ${
-                rainmeterStatus === "installed"
-                  ? "bg-white/60 dark:bg-gray-950/60"
-                  : "bg-white/30 dark:bg-gray-950/30 opacity-60"
-              }`}
-            >
-              <CardContent className="p-4">
-                <div className="aspect-square bg-gradient-to-br from-green-200 to-blue-200 dark:from-green-800 dark:to-blue-800 rounded-lg mb-3 relative overflow-hidden">
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Activity className="w-8 h-8 text-white/70" />
-                  </div>
-                </div>
-                <h3 className="font-semibold mb-1">Skin Package {i + 1}</h3>
-                <p className="text-sm text-muted-foreground mb-3">
-                  System monitoring skin with modern design
-                </p>
-                <div className="flex items-center justify-between">
-                  <Badge variant="secondary" className="text-xs">
-                    {rainmeterStatus === "installed"
-                      ? "Ready"
-                      : "Requires Rainmeter"}
-                  </Badge>
-                  <Button
-                    size="sm"
-                    disabled={rainmeterStatus !== "installed"}
-                    className="bg-gradient-to-r from-green-500 to-blue-500"
-                  >
-                    {rainmeterStatus === "installed"
-                      ? "Install"
-                      : "Unavailable"}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
+      {/* Skin Configuration Modal */}
+      <SkinConfigModal
+        skin={selectedSkin}
+        isOpen={isConfigModalOpen}
+        onClose={() => setIsConfigModalOpen(false)}
+        onSave={handleConfigSave}
+        currentConfig={
+          selectedSkin
+            ? rainmeterStorage.getSkinConfiguration(selectedSkin.id)
+            : null
+        }
+      />
+
+      {/* Toast Notifications */}
+      <RainmeterToastNotifications
+        toasts={toasts}
+        onRemoveToast={removeToast}
+      />
     </div>
   );
 }

@@ -5,7 +5,9 @@ const { TbBackground } = require("react-icons/tb");
 const fs = require("fs");
 const https = require("https");
 const os = require("os");
-const { exec } = require("child_process");
+const { exec, spawn } = require("child_process");
+const { promisify } = require("util");
+const execAsync = promisify(exec);
 
 const appServe = app.isPackaged
   ? serve({
@@ -445,6 +447,583 @@ const createWindow = () => {
     }
   });
 
+  // Rainmeter Skin Management APIs
+
+  // Download Rainmeter skin (.rmskin file)
+  ipcMain.handle(
+    "download-rainmeter-skin",
+    async (event, { url, filename, skinId }) => {
+      try {
+        const rainmeterSkinsPath = path.join(
+          os.homedir(),
+          "Documents",
+          "Rainmeter",
+          "Downloads"
+        );
+
+        // Create Rainmeter downloads folder if it doesn't exist
+        if (!fs.existsSync(rainmeterSkinsPath)) {
+          fs.mkdirSync(rainmeterSkinsPath, { recursive: true });
+        }
+
+        const filePath = path.join(rainmeterSkinsPath, filename);
+
+        // Check if file already exists
+        if (fs.existsSync(filePath)) {
+          console.log("Skin already downloaded:", filePath);
+          return { success: true, path: filePath, alreadyExists: true, skinId };
+        }
+
+        return new Promise((resolve, reject) => {
+          const file = fs.createWriteStream(filePath);
+
+          console.log("Downloading Rainmeter skin from:", url);
+          console.log("Saving to:", filePath);
+
+          // Send download progress updates
+          let totalSize = 0;
+          let downloadedSize = 0;
+
+          const downloadRequest = https.get(url, (response) => {
+            if (response.statusCode !== 200) {
+              reject({
+                success: false,
+                error: `HTTP ${response.statusCode}: ${response.statusMessage}`,
+                skinId,
+              });
+              return;
+            }
+
+            totalSize = parseInt(response.headers["content-length"] || "0");
+
+            response.on("data", (chunk) => {
+              downloadedSize += chunk.length;
+              if (totalSize > 0) {
+                const progress = Math.round((downloadedSize / totalSize) * 100);
+                event.sender.send("skin-download-progress", {
+                  skinId,
+                  progress,
+                  downloadedSize,
+                  totalSize,
+                });
+              }
+            });
+
+            response.pipe(file);
+
+            file.on("finish", () => {
+              file.close();
+              console.log("Rainmeter skin download completed:", filePath);
+              resolve({
+                success: true,
+                path: filePath,
+                alreadyExists: false,
+                skinId,
+              });
+            });
+
+            file.on("error", (err) => {
+              fs.unlink(filePath, () => {}); // Delete the file on error
+              console.error("File write error:", err);
+              reject({ success: false, error: err.message, skinId });
+            });
+          });
+
+          downloadRequest.on("error", (err) => {
+            console.error("Download error:", err);
+            reject({ success: false, error: err.message, skinId });
+          });
+        });
+      } catch (error) {
+        console.error("Download skin function error:", error);
+        return { success: false, error: error.message, skinId };
+      }
+    }
+  );
+
+  // Install Rainmeter skin (.rmskin file)
+  ipcMain.handle(
+    "install-rainmeter-skin",
+    async (event, { skinPath, skinId, skinName }) => {
+      try {
+        if (process.platform !== "win32") {
+          return {
+            success: false,
+            error: "Rainmeter skin installation is only supported on Windows.",
+            skinId,
+          };
+        }
+
+        // Find Rainmeter installation path first
+        const rainmeterPaths = [
+          path.join("C:", "Program Files", "Rainmeter"),
+          path.join(os.homedir(), "AppData", "Local", "Rainmeter"),
+        ];
+
+        let rainmeterDir = null;
+        for (const rainmeterPath of rainmeterPaths) {
+          if (fs.existsSync(rainmeterPath)) {
+            rainmeterDir = rainmeterPath;
+            break;
+          }
+        }
+
+        if (!rainmeterDir) {
+          return {
+            success: false,
+            error:
+              "Rainmeter installation not found. Please ensure Rainmeter is installed.",
+            skinId,
+          };
+        }
+
+        // Verify skin file exists
+        if (!fs.existsSync(skinPath)) {
+          return {
+            success: false,
+            error: "Skin file not found. Please download the skin first.",
+            skinId,
+          };
+        }
+
+        // Send initial progress
+        event.sender.send("skin-install-progress", {
+          skinId,
+          progress: 10,
+          message: "Starting installation...",
+        });
+
+        // Helper function for direct execution fallback
+        const tryDirectExecution = () => {
+          return new Promise((resolve) => {
+            // Fallback: Execute .rmskin file directly (uses Windows file association)
+            event.sender.send("skin-install-progress", {
+              skinId,
+              progress: 30,
+              message: "Using Windows file association...",
+            });
+
+            // Use 'start' command to execute the .rmskin file with its associated program
+            const installProcess = spawn(
+              "cmd",
+              ["/c", "start", "/wait", `"${skinPath}"`],
+              {
+                detached: false,
+                stdio: "ignore",
+              }
+            );
+
+            installProcess.on("close", (code) => {
+              if (code === 0 || code === null) {
+                // Installation completed
+                event.sender.send("skin-install-progress", {
+                  skinId,
+                  progress: 90,
+                  message: "Processing installation...",
+                });
+
+                setTimeout(() => {
+                  event.sender.send("skin-install-progress", {
+                    skinId,
+                    progress: 100,
+                    message: "Installation complete!",
+                  });
+
+                  resolve({
+                    success: true,
+                    path: path.join(
+                      os.homedir(),
+                      "Documents",
+                      "Rainmeter",
+                      "Skins"
+                    ),
+                    skinId,
+                    message: `${skinName} installation process completed.`,
+                  });
+                }, 1000);
+              } else {
+                resolve({
+                  success: false,
+                  error: `Installation failed with exit code: ${code}`,
+                  skinId,
+                });
+              }
+            });
+
+            installProcess.on("error", (error) => {
+              console.error("Direct execution error:", error);
+              resolve({
+                success: false,
+                error: `Installation failed: ${error.message}`,
+                skinId,
+              });
+            });
+
+            // Set a timeout to prevent hanging
+            setTimeout(() => {
+              try {
+                installProcess.kill();
+              } catch (err) {
+                console.error("Error killing install process:", err);
+              }
+              resolve({
+                success: false,
+                error: "Installation timed out",
+                skinId,
+              });
+            }, 60000); // 60 second timeout
+          });
+        };
+
+        // First try using SkinInstaller.exe (recommended method)
+        const skinInstallerPath = path.join(rainmeterDir, "SkinInstaller.exe");
+
+        if (fs.existsSync(skinInstallerPath)) {
+          // Use SkinInstaller.exe with silent installation
+          const installCommand = `"${skinInstallerPath}" "${skinPath}" /S`;
+
+          return new Promise((resolve) => {
+            exec(
+              installCommand,
+              { timeout: 60000 },
+              (error, stdout, stderr) => {
+                if (error) {
+                  console.error("SkinInstaller.exe error:", error);
+                  // Fallback to direct execution
+                  tryDirectExecution().then(resolve);
+                  return;
+                }
+
+                // Send progress updates
+                event.sender.send("skin-install-progress", {
+                  skinId,
+                  progress: 80,
+                  message: "Installation complete",
+                });
+
+                setTimeout(() => {
+                  event.sender.send("skin-install-progress", {
+                    skinId,
+                    progress: 100,
+                    message: "Skin installed successfully!",
+                  });
+
+                  resolve({
+                    success: true,
+                    path: path.join(
+                      os.homedir(),
+                      "Documents",
+                      "Rainmeter",
+                      "Skins"
+                    ),
+                    skinId,
+                    message: `${skinName} has been successfully installed.`,
+                  });
+                }, 500);
+              }
+            );
+          });
+        } else {
+          // SkinInstaller.exe not found, try direct execution
+          return tryDirectExecution();
+        }
+      } catch (error) {
+        console.error("Install skin function error:", error);
+        return { success: false, error: error.message, skinId };
+      }
+    }
+  );
+
+  // Enable/Disable Rainmeter skin
+  ipcMain.handle(
+    "toggle-rainmeter-skin",
+    async (event, { skinId, skinName, skinPath, isEnabled }) => {
+      try {
+        if (process.platform !== "win32") {
+          return {
+            success: false,
+            error: "Rainmeter skin management is only supported on Windows.",
+            skinId,
+          };
+        }
+
+        // Find Rainmeter executable
+        const rainmeterPaths = [
+          path.join("C:", "Program Files", "Rainmeter", "Rainmeter.exe"),
+          path.join(
+            os.homedir(),
+            "AppData",
+            "Local",
+            "Rainmeter",
+            "Rainmeter.exe"
+          ),
+        ];
+
+        let rainmeterExe = null;
+        for (const rainmeterPath of rainmeterPaths) {
+          if (fs.existsSync(rainmeterPath)) {
+            rainmeterExe = rainmeterPath;
+            break;
+          }
+        }
+
+        if (!rainmeterExe) {
+          return {
+            success: false,
+            error: "Rainmeter executable not found.",
+            skinId,
+          };
+        }
+
+        // Send progress update
+        const action = isEnabled ? "Disabling" : "Enabling";
+        event.sender.send("skin-toggle-progress", {
+          skinId,
+          message: `${action} ${skinName}...`,
+        });
+
+        // Use Rainmeter bangs to enable/disable skin
+        const command = isEnabled
+          ? `"${rainmeterExe}" !DeactivateConfig "${skinName}"`
+          : `"${rainmeterExe}" !ActivateConfig "${skinName}"`;
+
+        return new Promise((resolve, reject) => {
+          exec(command, { timeout: 10000 }, (error, stdout, stderr) => {
+            if (error) {
+              console.error("Skin toggle error:", error);
+              resolve({
+                success: false,
+                error: `Failed to ${isEnabled ? "disable" : "enable"} skin: ${
+                  error.message
+                }`,
+                skinId,
+              });
+              return;
+            }
+
+            resolve({
+              success: true,
+              isEnabled: !isEnabled,
+              skinId,
+              message: `${skinName} has been ${
+                isEnabled ? "disabled" : "enabled"
+              }.`,
+            });
+          });
+        });
+      } catch (error) {
+        console.error("Toggle skin function error:", error);
+        return { success: false, error: error.message, skinId };
+      }
+    }
+  );
+
+  // Open Rainmeter skin configuration
+  ipcMain.handle(
+    "configure-rainmeter-skin",
+    async (event, { skinId, skinName, skinPath }) => {
+      try {
+        if (process.platform !== "win32") {
+          return {
+            success: false,
+            error: "Rainmeter configuration is only supported on Windows.",
+            skinId,
+          };
+        }
+
+        // Find Rainmeter executable
+        const rainmeterPaths = [
+          path.join("C:", "Program Files", "Rainmeter", "Rainmeter.exe"),
+          path.join(
+            os.homedir(),
+            "AppData",
+            "Local",
+            "Rainmeter",
+            "Rainmeter.exe"
+          ),
+        ];
+
+        let rainmeterExe = null;
+        for (const rainmeterPath of rainmeterPaths) {
+          if (fs.existsSync(rainmeterPath)) {
+            rainmeterExe = rainmeterPath;
+            break;
+          }
+        }
+
+        if (!rainmeterExe) {
+          return {
+            success: false,
+            error: "Rainmeter executable not found.",
+            skinId,
+          };
+        }
+
+        // Open Rainmeter manage dialog for the specific skin
+        const command = `"${rainmeterExe}" !Manage Skins "${skinName}"`;
+
+        return new Promise((resolve, reject) => {
+          exec(command, { timeout: 10000 }, (error, stdout, stderr) => {
+            if (error) {
+              console.error("Configure skin error:", error);
+              resolve({
+                success: false,
+                error: `Failed to open configuration: ${error.message}`,
+                skinId,
+              });
+              return;
+            }
+
+            resolve({
+              success: true,
+              skinId,
+              message: `Configuration opened for ${skinName}.`,
+            });
+          });
+        });
+      } catch (error) {
+        console.error("Configure skin function error:", error);
+        return { success: false, error: error.message, skinId };
+      }
+    }
+  );
+
+  // Get list of installed Rainmeter skins
+  ipcMain.handle("get-installed-rainmeter-skins", async (event) => {
+    try {
+      if (process.platform !== "win32") {
+        return {
+          success: false,
+          error: "Only supported on Windows.",
+          skins: [],
+        };
+      }
+
+      const skinsPath = path.join(
+        os.homedir(),
+        "Documents",
+        "Rainmeter",
+        "Skins"
+      );
+
+      if (!fs.existsSync(skinsPath)) {
+        return { success: true, skins: [] };
+      }
+
+      const skins = [];
+      const skinFolders = fs
+        .readdirSync(skinsPath, { withFileTypes: true })
+        .filter((dirent) => dirent.isDirectory())
+        .map((dirent) => dirent.name);
+
+      for (const skinFolder of skinFolders) {
+        const skinPath = path.join(skinsPath, skinFolder);
+        const stats = fs.statSync(skinPath);
+
+        // Look for .ini files to determine if it's a valid skin
+        const iniFiles = fs
+          .readdirSync(skinPath)
+          .filter((file) => file.endsWith(".ini"))
+          .filter((file) => file !== "desktop.ini");
+
+        if (iniFiles.length > 0) {
+          skins.push({
+            skinId: skinFolder.toLowerCase().replace(/\s+/g, "-"),
+            name: skinFolder,
+            path: skinPath,
+            installedAt: stats.birthtime.toISOString(),
+            configFiles: iniFiles,
+            size: await getFolderSize(skinPath),
+          });
+        }
+      }
+
+      return { success: true, skins };
+    } catch (error) {
+      console.error("Get installed skins error:", error);
+      return { success: false, error: error.message, skins: [] };
+    }
+  });
+
+  // Uninstall Rainmeter skin
+  ipcMain.handle(
+    "uninstall-rainmeter-skin",
+    async (event, { skinId, skinName, skinPath }) => {
+      try {
+        if (process.platform !== "win32") {
+          return {
+            success: false,
+            error:
+              "Rainmeter skin uninstallation is only supported on Windows.",
+            skinId,
+          };
+        }
+
+        // Send progress update
+        event.sender.send("skin-uninstall-progress", {
+          skinId,
+          progress: 20,
+          message: `Preparing to uninstall ${skinName}...`,
+        });
+
+        // First, disable the skin if it's active
+        const rainmeterPaths = [
+          path.join("C:", "Program Files", "Rainmeter", "Rainmeter.exe"),
+          path.join(
+            os.homedir(),
+            "AppData",
+            "Local",
+            "Rainmeter",
+            "Rainmeter.exe"
+          ),
+        ];
+
+        let rainmeterExe = null;
+        for (const rainmeterPath of rainmeterPaths) {
+          if (fs.existsSync(rainmeterPath)) {
+            rainmeterExe = rainmeterPath;
+            break;
+          }
+        }
+
+        if (rainmeterExe) {
+          // Deactivate the skin first
+          await new Promise((resolve) => {
+            exec(`"${rainmeterExe}" !DeactivateConfig "${skinName}"`, () => {
+              resolve();
+            });
+          });
+        }
+
+        event.sender.send("skin-uninstall-progress", {
+          skinId,
+          progress: 50,
+          message: `Removing skin files...`,
+        });
+
+        // Remove the skin folder
+        if (fs.existsSync(skinPath)) {
+          await removeDirectory(skinPath);
+        }
+
+        event.sender.send("skin-uninstall-progress", {
+          skinId,
+          progress: 100,
+          message: `Uninstallation complete!`,
+        });
+
+        return {
+          success: true,
+          skinId,
+          message: `${skinName} has been successfully uninstalled.`,
+        };
+      } catch (error) {
+        console.error("Uninstall skin function error:", error);
+        return { success: false, error: error.message, skinId };
+      }
+    }
+  );
+
   if (app.isPackaged) {
     appServe(win).then(() => {
       win.loadURL("app://-");
@@ -514,3 +1093,48 @@ app.on("activate", () => {
     createWindow();
   }
 });
+
+// Helper function to get folder size
+async function getFolderSize(folderPath) {
+  try {
+    let totalSize = 0;
+
+    const items = fs.readdirSync(folderPath, { withFileTypes: true });
+
+    for (const item of items) {
+      const itemPath = path.join(folderPath, item.name);
+
+      if (item.isDirectory()) {
+        totalSize += await getFolderSize(itemPath);
+      } else {
+        const stats = fs.statSync(itemPath);
+        totalSize += stats.size;
+      }
+    }
+
+    return totalSize;
+  } catch (error) {
+    console.error("Error calculating folder size:", error);
+    return 0;
+  }
+}
+
+// Helper function to remove directory recursively
+async function removeDirectory(dirPath) {
+  if (fs.existsSync(dirPath)) {
+    const items = fs.readdirSync(dirPath);
+
+    for (const item of items) {
+      const itemPath = path.join(dirPath, item);
+      const stats = fs.statSync(itemPath);
+
+      if (stats.isDirectory()) {
+        await removeDirectory(itemPath);
+      } else {
+        fs.unlinkSync(itemPath);
+      }
+    }
+
+    fs.rmdirSync(dirPath);
+  }
+}
