@@ -25,7 +25,7 @@ const createWindow = () => {
     titleBarStyle: "hidden",
     // backgroundColor: "#f8fafc",
     backgroundMaterial: "acrylic",
-    icon: path.join(__dirname, "../public/favicon.ico"),
+    icon: path.join(__dirname, "../resources/icon.png"),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       nodeIntegration: false,
@@ -1158,7 +1158,7 @@ const createWindow = () => {
       console.log(
         `Successfully connected to Next.js dev server on port ${tryPorts[currentPortIndex]}`
       );
-      win.webContents.openDevTools();
+      // win.webContents.openDevTools(); // Removed auto-opening of dev tools
     });
   }
 };

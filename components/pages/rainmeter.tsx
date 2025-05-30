@@ -1105,6 +1105,9 @@ export function RainmeterPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         isInstalled={selectedSkin ? installedSkins.has(selectedSkin.id) : false}
+        isDownloaded={
+          selectedSkin ? downloadedSkins.has(selectedSkin.id) : false
+        }
         onDownload={handleModalDownload}
         onInstall={handleModalInstall}
         onEnable={() => {}}

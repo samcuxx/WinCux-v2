@@ -74,7 +74,7 @@ export function SkinGrid({
                   ? "border-2 border-blue-400 dark:border-blue-500"
                   : "border-0"
               }`}
-              onClick={() => !isInstalled && onSkinClick(skin)}
+              onClick={() => onSkinClick(skin)}
             >
               <CardContent className="p-4">
                 <div className="flex items-center space-x-4">
@@ -124,6 +124,14 @@ export function SkinGrid({
 
                         {isInstalled ? (
                           <div className="flex space-x-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => onConfigure(skin, e)}
+                            >
+                              <Settings className="w-3 h-3 mr-1" />
+                              Configure
+                            </Button>
                             <Button
                               size="sm"
                               variant="destructive"
@@ -199,7 +207,7 @@ export function SkinGrid({
                 ? "border-2 border-blue-400 dark:border-blue-500"
                 : "border-0"
             }`}
-            onClick={() => !isInstalled && onSkinClick(skin)}
+            onClick={() => onSkinClick(skin)}
           >
             <CardContent className="p-0">
               {/* Thumbnail */}
@@ -245,15 +253,24 @@ export function SkinGrid({
                 {/* Actions */}
                 <div className="flex space-x-2">
                   {isInstalled ? (
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      className="flex-1"
-                      onClick={(e) => onUninstall(skin, e)}
-                    >
-                      <Download className="w-3 h-3 mr-1" />
-                      Uninstall
-                    </Button>
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => onConfigure(skin, e)}
+                      >
+                        <Settings className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="flex-1"
+                        onClick={(e) => onUninstall(skin, e)}
+                      >
+                        <Download className="w-3 h-3 mr-1" />
+                        Uninstall
+                      </Button>
+                    </>
                   ) : isDownloaded ? (
                     <>
                       <Button
