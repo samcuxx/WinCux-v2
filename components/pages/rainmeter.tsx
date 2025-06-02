@@ -23,9 +23,21 @@ import {
   XCircle,
   AlertCircle,
   Clock,
+  HelpCircle,
+  Settings,
+  Info,
+  ExternalLink,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { RainmeterSkin } from "@/types/rainmeter";
 import { useRainmeterSkins } from "@/hooks/use-rainmeter-skins";
 import { rainmeterSkinsAPI } from "@/lib/services/rainmeter-skins-api";
@@ -67,6 +79,7 @@ export function RainmeterPage() {
   const [installingItems, setInstallingItems] = useState<Set<string>>(
     new Set()
   );
+  const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
 
   // Use the skins hook
   const {
@@ -874,6 +887,43 @@ export function RainmeterPage() {
     await handleConfigure(skin, mockEvent);
   };
 
+  // Function to open Rainmeter main configuration
+  const handleOpenRainmeterConfig = async () => {
+    try {
+      const toastId = addToast("Opening Rainmeter Configuration", {
+        type: "loading",
+        subMessage: "Launching Rainmeter settings...",
+      });
+
+      if (typeof window.electronAPI !== "undefined") {
+        const result = await window.electronAPI.openRainmeterConfig();
+
+        if (result.success) {
+          updateToast(toastId, {
+            type: "success",
+            message: "Rainmeter Configuration Opened",
+            subMessage: "Settings window is now available",
+            duration: 3000,
+          });
+        } else {
+          updateToast(toastId, {
+            type: "error",
+            message: "Failed to Open Configuration",
+            subMessage: result.error || "Unknown error occurred",
+            duration: 8000,
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error opening Rainmeter configuration:", error);
+      addToast("Failed to open Rainmeter configuration", {
+        type: "error",
+        subMessage: error instanceof Error ? error.message : "Unknown error",
+        duration: 8000,
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Toast Notifications */}
@@ -937,6 +987,300 @@ export function RainmeterPage() {
                   Active
                 </span>
               </div>
+
+              {/* Help/Info Icon */}
+              <Dialog
+                open={isHelpDialogOpen}
+                onOpenChange={setIsHelpDialogOpen}
+              >
+                <DialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900/20"
+                    title="Help & Instructions"
+                  >
+                    <HelpCircle className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  </Button>
+                </DialogTrigger>
+
+                <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center space-x-2 text-xl">
+                      <Info className="w-6 h-6 text-blue-600" />
+                      <span>Rainmeter Skins Guide</span>
+                    </DialogTitle>
+                    <DialogDescription>
+                      Complete guide to using Rainmeter skins effectively
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="space-y-6 py-4">
+                    {/* What is Rainmeter Section */}
+                    <div className="space-y-3">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center space-x-2">
+                        <Activity className="w-5 h-5 text-blue-600" />
+                        <span>What is Rainmeter?</span>
+                      </h3>
+                      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <p className="text-sm text-gray-700 dark:text-gray-300">
+                          Rainmeter is a desktop customization tool that
+                          displays customizable skins on your desktop. These
+                          skins can show system information (CPU, RAM, weather),
+                          media players, calendars, clocks, and much more. Each
+                          skin is highly customizable and can transform your
+                          desktop experience.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* How to Use Skins */}
+                    <div className="space-y-3">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center space-x-2">
+                        <Settings className="w-5 h-5 text-green-600" />
+                        <span>How to Use Rainmeter Skins</span>
+                      </h3>
+                      <div className="grid gap-4">
+                        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                          <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">
+                            1. Installing Skins
+                          </h4>
+                          <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1 ml-4">
+                            <li>
+                              • Click the <strong>Install</strong> button on any
+                              skin in the gallery
+                            </li>
+                            <li>
+                              • The skin will be automatically downloaded and
+                              installed
+                            </li>
+                            <li>
+                              • You'll see a success notification when
+                              installation is complete
+                            </li>
+                          </ul>
+                        </div>
+
+                        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                          <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">
+                            2. Activating Skins
+                          </h4>
+                          <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1 ml-4">
+                            <li>
+                              • After installation, skins need to be manually
+                              activated
+                            </li>
+                            <li>
+                              • Right-click on your desktop and select{" "}
+                              <strong>"Manage"</strong>
+                            </li>
+                            <li>
+                              • Or use the{" "}
+                              <strong>"Open Rainmeter Config"</strong> button
+                              below
+                            </li>
+                            <li>
+                              • In the Rainmeter Manager, find your skin and
+                              click <strong>"Load"</strong>
+                            </li>
+                          </ul>
+                        </div>
+
+                        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                          <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">
+                            3. Customizing Skins
+                          </h4>
+                          <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1 ml-4">
+                            <li>
+                              • Right-click on any active skin to access its
+                              context menu
+                            </li>
+                            <li>
+                              • Choose <strong>"Settings"</strong> or{" "}
+                              <strong>"Variables"</strong> to customize
+                            </li>
+                            <li>
+                              • Adjust positions by dragging skins around your
+                              desktop
+                            </li>
+                            <li>
+                              • Use <strong>"Transparency"</strong> settings to
+                              blend with your wallpaper
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Troubleshooting */}
+                    <div className="space-y-3">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center space-x-2">
+                        <AlertCircle className="w-5 h-5 text-orange-600" />
+                        <span>Troubleshooting</span>
+                      </h3>
+
+                      <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
+                        <h4 className="font-medium text-orange-900 dark:text-orange-100 mb-2">
+                          ⚠️ Skin not showing after installation?
+                        </h4>
+                        <p className="text-sm text-orange-800 dark:text-orange-200 mb-3">
+                          This is normal! Rainmeter skins require manual
+                          activation after installation.
+                        </p>
+
+                        <div className="space-y-2">
+                          <p className="text-sm text-orange-800 dark:text-orange-200 font-medium">
+                            Follow these steps:
+                          </p>
+                          <ol className="text-sm text-orange-800 dark:text-orange-200 space-y-1 ml-4">
+                            <li>
+                              1. Click the{" "}
+                              <strong>"Open Rainmeter Config"</strong> button
+                              below
+                            </li>
+                            <li>
+                              2. In Rainmeter Manager, browse to your installed
+                              skin
+                            </li>
+                            <li>
+                              3. Select a <strong>.ini file</strong> (skin
+                              variant) from the list
+                            </li>
+                            <li>
+                              4. Click the <strong>"Load"</strong> button to
+                              activate it
+                            </li>
+                            <li>5. The skin will appear on your desktop!</li>
+                          </ol>
+                        </div>
+                      </div>
+
+                      <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">
+                          Common Issues & Solutions
+                        </h4>
+                        <div className="space-y-3 text-sm">
+                          <div>
+                            <strong className="text-gray-900 dark:text-gray-100">
+                              Skin appears but shows no data:
+                            </strong>
+                            <p className="text-gray-600 dark:text-gray-400">
+                              Right-click the skin → Settings → Configure data
+                              sources (weather location, drive letters, etc.)
+                            </p>
+                          </div>
+                          <div>
+                            <strong className="text-gray-900 dark:text-gray-100">
+                              Skin is in wrong position:
+                            </strong>
+                            <p className="text-gray-600 dark:text-gray-400">
+                              Right-click → Position → Drag to move, or set
+                              specific coordinates
+                            </p>
+                          </div>
+                          <div>
+                            <strong className="text-gray-900 dark:text-gray-100">
+                              Skin disappears after restart:
+                            </strong>
+                            <p className="text-gray-600 dark:text-gray-400">
+                              Enable "Load on startup" in Rainmeter settings, or
+                              save your layout
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Quick Actions */}
+                    <div className="space-y-3">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center space-x-2">
+                        <ExternalLink className="w-5 h-5 text-purple-600" />
+                        <span>Quick Actions</span>
+                      </h3>
+
+                      <div className="flex flex-wrap gap-3">
+                        <Button
+                          onClick={handleOpenRainmeterConfig}
+                          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                        >
+                          <Settings className="w-4 h-4 mr-2" />
+                          Open Rainmeter Config
+                        </Button>
+
+                        <Button
+                          variant="outline"
+                          onClick={() =>
+                            window.open("https://docs.rainmeter.net/", "_blank")
+                          }
+                        >
+                          <ExternalLink className="w-4 h-4 mr-2" />
+                          Official Documentation
+                        </Button>
+
+                        <Button
+                          variant="outline"
+                          onClick={() =>
+                            window.open("https://www.rainmeter.net/", "_blank")
+                          }
+                        >
+                          <ExternalLink className="w-4 h-4 mr-2" />
+                          Rainmeter Website
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Pro Tips */}
+                    <div className="space-y-3">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center space-x-2">
+                        <CheckCircle className="w-5 h-5 text-green-600" />
+                        <span>Pro Tips</span>
+                      </h3>
+
+                      <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+                        <ul className="text-sm text-green-800 dark:text-green-200 space-y-2">
+                          <li className="flex items-start space-x-2">
+                            <span className="text-green-600 dark:text-green-400 mt-0.5">
+                              💡
+                            </span>
+                            <span>
+                              <strong>Create Layouts:</strong> Save your skin
+                              arrangements as layouts for easy switching
+                            </span>
+                          </li>
+                          <li className="flex items-start space-x-2">
+                            <span className="text-green-600 dark:text-green-400 mt-0.5">
+                              🎨
+                            </span>
+                            <span>
+                              <strong>Layer Management:</strong> Use "Stay
+                              topmost" or "On desktop" to control skin layers
+                            </span>
+                          </li>
+                          <li className="flex items-start space-x-2">
+                            <span className="text-green-600 dark:text-green-400 mt-0.5">
+                              ⚡
+                            </span>
+                            <span>
+                              <strong>Performance:</strong> Disable unused skins
+                              to reduce system resource usage
+                            </span>
+                          </li>
+                          <li className="flex items-start space-x-2">
+                            <span className="text-green-600 dark:text-green-400 mt-0.5">
+                              🔧
+                            </span>
+                            <span>
+                              <strong>Customization:</strong> Most skins have
+                              variables you can edit for colors, sizes, and data
+                              sources
+                            </span>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
 
             <div className="flex items-center space-x-2">

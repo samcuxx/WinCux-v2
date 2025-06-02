@@ -56,6 +56,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
       skinName,
       skinPath,
     }),
+  openRainmeterConfig: () => ipcRenderer.invoke("open-rainmeter-config"),
 
   // System utilities
   platform: process.platform,

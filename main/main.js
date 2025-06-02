@@ -1137,6 +1137,70 @@ const createWindow = () => {
     }
   });
 
+  // Open Rainmeter main configuration
+  ipcMain.handle("open-rainmeter-config", async (event) => {
+    try {
+      if (process.platform !== "win32") {
+        return {
+          success: false,
+          error: "Rainmeter configuration is only supported on Windows.",
+        };
+      }
+
+      // Find Rainmeter executable
+      const rainmeterPaths = [
+        path.join("C:", "Program Files", "Rainmeter", "Rainmeter.exe"),
+        path.join(
+          os.homedir(),
+          "AppData",
+          "Local",
+          "Rainmeter",
+          "Rainmeter.exe"
+        ),
+      ];
+
+      let rainmeterExe = null;
+      for (const rainmeterPath of rainmeterPaths) {
+        if (fs.existsSync(rainmeterPath)) {
+          rainmeterExe = rainmeterPath;
+          break;
+        }
+      }
+
+      if (!rainmeterExe) {
+        return {
+          success: false,
+          error:
+            "Rainmeter executable not found. Please ensure Rainmeter is installed.",
+        };
+      }
+
+      // Open Rainmeter main manage dialog
+      const command = `"${rainmeterExe}" !Manage`;
+
+      return new Promise((resolve, reject) => {
+        exec(command, { timeout: 10000 }, (error, stdout, stderr) => {
+          if (error) {
+            console.error("Open Rainmeter config error:", error);
+            resolve({
+              success: false,
+              error: `Failed to open Rainmeter configuration: ${error.message}`,
+            });
+            return;
+          }
+
+          resolve({
+            success: true,
+            message: "Rainmeter configuration window opened successfully.",
+          });
+        });
+      });
+    } catch (error) {
+      console.error("Open Rainmeter config function error:", error);
+      return { success: false, error: error.message };
+    }
+  });
+
   // Uninstall Rainmeter skin
   ipcMain.handle(
     "uninstall-rainmeter-skin",
