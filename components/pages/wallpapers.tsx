@@ -17,6 +17,7 @@ import { WallpaperGrid } from "@/components/wallpapers/wallpaper-grid";
 import { InfiniteScrollTrigger } from "@/components/wallpapers/infinite-scroll-trigger";
 import { LoadingState } from "@/components/wallpapers/loading-state";
 import { EmptyState } from "@/components/wallpapers/empty-state";
+import { WallpaperSkeleton } from "@/components/wallpapers/wallpaper-skeleton";
 import { ToastNotifications } from "@/components/wallpapers/toast-notifications";
 import { Button } from "@/components/ui/button";
 import { Loader2, RefreshCw } from "lucide-react";
@@ -410,16 +411,25 @@ export function WallpapersPage() {
         searchQuery={searchQuery}
       />
 
-      {/* Wallpaper Grid */}
-      <WallpaperGrid
-        wallpapers={wallpapers}
-        viewMode={viewMode}
-        downloadedWallpapers={downloadedWallpapers}
-        onWallpaperClick={handleWallpaperClick}
-        onSetWallpaper={handleSetWallpaper}
-        onDownload={handleDownload}
-        onFavorite={handleFavorite}
-      />
+      {/* Wallpaper Grid or Skeleton Loading */}
+      {isLoading && wallpapers.length === 0 ? (
+        <WallpaperSkeleton count={24} viewMode={viewMode} />
+      ) : (
+        <WallpaperGrid
+          wallpapers={wallpapers}
+          viewMode={viewMode}
+          downloadedWallpapers={downloadedWallpapers}
+          onWallpaperClick={handleWallpaperClick}
+          onSetWallpaper={handleSetWallpaper}
+          onDownload={handleDownload}
+          onFavorite={handleFavorite}
+        />
+      )}
+
+      {/* Skeleton cards for loading more */}
+      {isLoadingMore && wallpapers.length > 0 && (
+        <WallpaperSkeleton count={8} viewMode={viewMode} />
+      )}
 
       {/* Infinite Scroll Trigger */}
       <InfiniteScrollTrigger
@@ -448,9 +458,6 @@ export function WallpapersPage() {
           </Button>
         </div>
       )}
-
-      {/* Loading State */}
-      {isLoading && wallpapers.length === 0 && <LoadingState />}
 
       {/* Empty State */}
       {!isLoading && wallpapers.length === 0 && !error && (

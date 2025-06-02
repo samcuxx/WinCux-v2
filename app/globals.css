@@ -202,6 +202,20 @@
     }
   }
 
+  /* Shimmer animation for skeleton loading */
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%) skewX(-12deg);
+    }
+    100% {
+      transform: translateX(200%) skewX(-12deg);
+    }
+  }
+
+  .animate-shimmer {
+    animation: shimmer 2s infinite;
+  }
+
   /* Windows 11 Fluent Design System colors */
   .fluent-blue {
     background: linear-gradient(135deg, #0078d4 0%, #106ebe 100%);

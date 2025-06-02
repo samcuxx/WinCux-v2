@@ -99,17 +99,7 @@ export function InfiniteScrollTrigger({
 
   // Don't render anything if there are no more pages
   if (!hasNextPage) {
-    return (
-      <div className="flex flex-col items-center py-12 text-center">
-        <Sparkles className="w-8 h-8 text-purple-500 mb-3 animate-pulse" />
-        <p className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-1">
-          You've reached the end!
-        </p>
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          No more wallpapers to load
-        </p>
-      </div>
-    );
+    return null;
   }
 
   return (
@@ -122,7 +112,6 @@ export function InfiniteScrollTrigger({
       >
         {isLoadingMore && (
           <div className="flex flex-col items-center space-y-4">
-            
             <div className="flex space-x-1">
               <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
               <div
