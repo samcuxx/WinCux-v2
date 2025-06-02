@@ -30,6 +30,20 @@ interface UseWallpapersResult {
   getCacheStats: () => any;
 }
 
+// Utility function to deduplicate wallpapers by ID
+const deduplicateWallpapers = (
+  wallpapers: LocalWallpaper[]
+): LocalWallpaper[] => {
+  const seen = new Set<string>();
+  return wallpapers.filter((wallpaper) => {
+    if (seen.has(wallpaper.id)) {
+      return false;
+    }
+    seen.add(wallpaper.id);
+    return true;
+  });
+};
+
 export function useWallpapers(
   options: UseWallpapersOptions = {}
 ): UseWallpapersResult {
@@ -70,7 +84,7 @@ export function useWallpapers(
               : 0,
           });
 
-          setWallpapers(cachedData.wallpapers);
+          setWallpapers(deduplicateWallpapers(cachedData.wallpapers));
           setTotalCount(cachedData.totalCount);
           setHasNextPage(cachedData.hasNextPage);
           setIsFromCache(cachedData.isFromCache);
@@ -132,7 +146,7 @@ export function useWallpapers(
           return null;
         }
 
-        setWallpapers(result.wallpapers);
+        setWallpapers(deduplicateWallpapers(result.wallpapers));
         setTotalCount(result.totalCount);
         setHasNextPage(result.hasNextPage);
         setIsFromCache(result.isFromCache);
@@ -182,11 +196,23 @@ export function useWallpapers(
   }, [currentOptions, performSearch]);
 
   const loadMore = useCallback(async (): Promise<void> => {
-    if (isLoadingMore || !hasNextPage || isLoading) return;
+    if (isLoadingMore || !hasNextPage || isLoading) {
+      console.log("⚠️ Load more skipped:", {
+        isLoadingMore,
+        hasNextPage,
+        isLoading,
+      });
+      return;
+    }
 
     try {
       setIsLoadingMore(true);
       setError(null);
+
+      console.log("🚀 Loading more wallpapers:", {
+        currentPage: currentPage + 1,
+        options: currentOptions,
+      });
 
       const result = await wallpaperProvider.loadMore({
         ...currentOptions,
@@ -194,27 +220,42 @@ export function useWallpapers(
         page: currentPage,
       });
 
-      // Append new wallpapers to existing ones
+      // Append new wallpapers to existing ones with deduplication
       setWallpapers((prev) => {
         const existingIds = new Set(prev.map((w) => w.id));
         const newWallpapers = result.wallpapers.filter(
           (w) => !existingIds.has(w.id)
         );
-        return [...prev, ...newWallpapers];
+        const combinedWallpapers = [...prev, ...newWallpapers];
+        // Double-check for any duplicates that might have slipped through
+        const finalWallpapers = deduplicateWallpapers(combinedWallpapers);
+
+        console.log("📊 Wallpapers update:", {
+          previous: prev.length,
+          new: newWallpapers.length,
+          total: finalWallpapers.length,
+        });
+
+        return finalWallpapers;
       });
 
       setTotalCount(result.totalCount);
       setHasNextPage(result.hasNextPage);
       setCurrentPage((prev) => prev + 1);
 
-      console.log("Load more completed:", {
+      console.log("✅ Load more completed:", {
         newCount: result.wallpapers.length,
-        totalCount: wallpapers.length + result.wallpapers.length,
+        totalLoaded:
+          wallpapers.length +
+          result.wallpapers.filter(
+            (w) => !wallpapers.some((existing) => existing.id === w.id)
+          ).length,
         hasMore: result.hasNextPage,
         fromCache: result.isFromCache,
+        nextPage: currentPage + 1,
       });
     } catch (err) {
-      console.error("Load more failed:", err);
+      console.error("❌ Load more failed:", err);
       setError(
         err instanceof Error ? err : new Error("Failed to load more wallpapers")
       );
@@ -228,6 +269,7 @@ export function useWallpapers(
     isLoadingMore,
     isLoading,
     wallpapers.length,
+    getPuritySetting,
   ]);
 
   const clearCache = useCallback((): void => {

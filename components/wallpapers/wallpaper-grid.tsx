@@ -26,6 +26,19 @@ export function WallpaperGrid({
   onDownload,
   onFavorite,
 }: WallpaperGridProps) {
+  // Deduplicate wallpapers as a safety measure to prevent React key warnings
+  const uniqueWallpapers = React.useMemo(() => {
+    const seen = new Set<string>();
+    return wallpapers.filter((wallpaper) => {
+      if (seen.has(wallpaper.id)) {
+        console.warn(`Duplicate wallpaper ID found: ${wallpaper.id}`);
+        return false;
+      }
+      seen.add(wallpaper.id);
+      return true;
+    });
+  }, [wallpapers]);
+
   return (
     <div
       className={`${
@@ -34,7 +47,7 @@ export function WallpaperGrid({
           : "grid grid-cols-1 gap-4"
       } w-full`}
     >
-      {wallpapers.map((wallpaper) => (
+      {uniqueWallpapers.map((wallpaper) => (
         <Card
           key={wallpaper.id}
           className="group border-0 overflow-hidden hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 cursor-pointer bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm shadow-lg hover:shadow-purple-500/20"

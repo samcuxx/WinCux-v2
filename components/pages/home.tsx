@@ -54,7 +54,7 @@ export function HomePage() {
                   Wallpaper Gallery
                 </h3>
                 <p className="text-muted-foreground">
-                  5,000+ curated wallpapers
+                  1M+ curated wallpapers
                 </p>
               </div>
             </div>

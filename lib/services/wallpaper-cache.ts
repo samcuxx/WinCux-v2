@@ -387,19 +387,30 @@ class WallpaperCacheService {
       const firstPageEntry = this.get(query, category, sorting, 1);
 
       if (firstPageEntry && page > 1) {
-        // Append new wallpapers to the existing data
-        const combinedData = [...firstPageEntry.data, ...newWallpapers];
+        // Create a set of existing wallpaper IDs to prevent duplicates
+        const existingIds = new Set(firstPageEntry.data.map((w) => w.id));
 
-        // Update the first page cache with combined data
-        this.set(
-          query,
-          category,
-          sorting,
-          1,
-          combinedData,
-          totalCount,
-          hasNextPage
+        // Filter out wallpapers that already exist
+        const uniqueNewWallpapers = newWallpapers.filter(
+          (w) => !existingIds.has(w.id)
         );
+
+        // Only append if there are actually new unique wallpapers
+        if (uniqueNewWallpapers.length > 0) {
+          // Append new wallpapers to the existing data
+          const combinedData = [...firstPageEntry.data, ...uniqueNewWallpapers];
+
+          // Update the first page cache with combined data
+          this.set(
+            query,
+            category,
+            sorting,
+            1,
+            combinedData,
+            totalCount,
+            hasNextPage
+          );
+        }
       } else {
         // Just cache this page normally
         this.set(

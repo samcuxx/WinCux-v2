@@ -14,10 +14,12 @@ import { CategoryFilters } from "@/components/wallpapers/category-filters";
 import { ErrorState } from "@/components/wallpapers/error-state";
 import { ResultsCount } from "@/components/wallpapers/results-count";
 import { WallpaperGrid } from "@/components/wallpapers/wallpaper-grid";
-import { LoadMoreButton } from "@/components/wallpapers/load-more-button";
+import { InfiniteScrollTrigger } from "@/components/wallpapers/infinite-scroll-trigger";
 import { LoadingState } from "@/components/wallpapers/loading-state";
 import { EmptyState } from "@/components/wallpapers/empty-state";
 import { ToastNotifications } from "@/components/wallpapers/toast-notifications";
+import { Button } from "@/components/ui/button";
+import { Loader2, RefreshCw } from "lucide-react";
 
 interface Toast {
   id: string;
@@ -350,6 +352,13 @@ export function WallpapersPage() {
 
   return (
     <div className="space-y-6">
+      {/* Infinite scroll loading indicator at top */}
+      {isLoadingMore && (
+        <div className="fixed top-0 left-0 right-0 z-40 bg-gradient-to-r from-blue-500 to-purple-500 h-1">
+          <div className="h-full bg-white/30 animate-pulse"></div>
+        </div>
+      )}
+
       {/* Header */}
       <WallpaperHeader
         isLoading={isLoading}
@@ -412,12 +421,33 @@ export function WallpapersPage() {
         onFavorite={handleFavorite}
       />
 
-      {/* Load More Button */}
-      <LoadMoreButton
+      {/* Infinite Scroll Trigger */}
+      <InfiniteScrollTrigger
         hasNextPage={hasNextPage}
         isLoadingMore={isLoadingMore}
         onLoadMore={loadMore}
+        threshold={600}
+        rootMargin="300px"
       />
+
+      {/* Manual Load More Button (fallback) - only show if there's an error */}
+      {error && hasNextPage && (
+        <div className="flex justify-center py-6">
+          <Button
+            variant="outline"
+            onClick={loadMore}
+            disabled={isLoadingMore}
+            className="bg-orange-50 hover:bg-orange-100 border-orange-200 text-orange-700 dark:bg-orange-900/20 dark:hover:bg-orange-900/30 dark:border-orange-800 dark:text-orange-300"
+          >
+            {isLoadingMore ? (
+              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+            ) : (
+              <RefreshCw className="w-4 h-4 mr-2" />
+            )}
+            Retry Loading More
+          </Button>
+        </div>
+      )}
 
       {/* Loading State */}
       {isLoading && wallpapers.length === 0 && <LoadingState />}
