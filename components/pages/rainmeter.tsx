@@ -320,11 +320,25 @@ export function RainmeterPage() {
 
         const resultListener = (
           _event: any,
-          result: { success: boolean; error?: string }
+          result: {
+            success: boolean;
+            error?: string;
+            rainmeterStarted?: boolean;
+            startupNote?: string;
+          }
         ) => {
           if (result.success) {
             setInstallationState("success");
             setRainmeterStatus("installed");
+
+            // Store startup information for display
+            if (result.rainmeterStarted) {
+              setErrorMessage(
+                "Installation completed and Rainmeter has been started automatically!"
+              );
+            } else if (result.startupNote) {
+              setErrorMessage(result.startupNote);
+            }
           } else {
             setInstallationState("error");
             setErrorMessage(result.error || "Installation failed");
@@ -397,9 +411,18 @@ export function RainmeterPage() {
         );
       case "success":
         return (
-          <div className="flex items-center space-x-2 text-green-500">
-            <CheckCircle className="h-5 w-5" />
-            <span>Installation successful! Rainmeter is now ready to use.</span>
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2 text-green-500">
+              <CheckCircle className="h-5 w-5" />
+              <span>
+                Installation successful! Rainmeter is now ready to use.
+              </span>
+            </div>
+            {errorMessage && (
+              <div className="text-sm text-muted-foreground bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-200 dark:border-green-800">
+                {errorMessage}
+              </div>
+            )}
           </div>
         );
       case "error":

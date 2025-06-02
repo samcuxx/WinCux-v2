@@ -299,6 +299,70 @@ const createWindow = () => {
     }
   });
 
+  // Helper function to start Rainmeter after installation
+  const startRainmeterAfterInstall = (event) => {
+    try {
+      // Common Rainmeter installation paths
+      const commonPaths = [
+        path.join("C:", "Program Files", "Rainmeter", "Rainmeter.exe"),
+        path.join(
+          os.homedir(),
+          "AppData",
+          "Local",
+          "Rainmeter",
+          "Rainmeter.exe"
+        ),
+      ];
+
+      let rainmeterPath = null;
+
+      // Find the Rainmeter executable
+      for (const pathToCheck of commonPaths) {
+        if (fs.existsSync(pathToCheck)) {
+          rainmeterPath = pathToCheck;
+          break;
+        }
+      }
+
+      if (rainmeterPath) {
+        console.log("Found Rainmeter at:", rainmeterPath);
+
+        // Launch Rainmeter
+        const { spawn } = require("child_process");
+        const rainmeterProcess = spawn(rainmeterPath, [], {
+          detached: true,
+          stdio: "ignore",
+        });
+
+        // Detach the process so it runs independently
+        rainmeterProcess.unref();
+
+        console.log("Rainmeter started successfully");
+        event.reply("rainmeter-install-result", {
+          success: true,
+          rainmeterStarted: true,
+        });
+      } else {
+        console.log("Rainmeter executable not found in common paths");
+        // Still report success for installation, but note that auto-start failed
+        event.reply("rainmeter-install-result", {
+          success: true,
+          rainmeterStarted: false,
+          startupNote:
+            "Installation completed but couldn't auto-start Rainmeter. Please start it manually.",
+        });
+      }
+    } catch (error) {
+      console.error("Error starting Rainmeter:", error);
+      // Still report success for installation, but note that auto-start failed
+      event.reply("rainmeter-install-result", {
+        success: true,
+        rainmeterStarted: false,
+        startupNote: `Installation completed but failed to auto-start Rainmeter: ${error.message}`,
+      });
+    }
+  };
+
   // Rainmeter installation
   ipcMain.on("install-rainmeter", (event) => {
     if (process.platform !== "win32") {
@@ -332,10 +396,20 @@ const createWindow = () => {
             stdout.includes("was successfully installed")
           ) {
             event.reply("rainmeter-install-progress", { progress: 100 });
-            event.reply("rainmeter-install-result", { success: true });
+
+            // Attempt to start Rainmeter after successful installation
+            // Add a small delay to ensure installation is fully complete
+            setTimeout(() => {
+              startRainmeterAfterInstall(event);
+            }, 2000);
           } else if (stdout.includes("already installed")) {
             event.reply("rainmeter-install-progress", { progress: 100 });
-            event.reply("rainmeter-install-result", { success: true });
+
+            // Attempt to start Rainmeter since it's already installed
+            // Add a small delay for consistency
+            setTimeout(() => {
+              startRainmeterAfterInstall(event);
+            }, 1000);
           } else {
             event.reply("rainmeter-install-result", {
               success: false,
