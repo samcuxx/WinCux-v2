@@ -25,6 +25,13 @@ export interface ElectronAPI {
   checkWallpaperExists: (
     filename: string
   ) => Promise<{ exists: boolean; path?: string | null; error?: string }>;
+  getLocalWallpaper: (filename: string) => Promise<{
+    success: boolean;
+    dataUrl?: string;
+    path?: string;
+    size?: number;
+    error?: string;
+  }>;
 
   // Rainmeter Skin Management
   downloadRainmeterSkin: (

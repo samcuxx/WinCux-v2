@@ -77,7 +77,7 @@ export function WallpapersPage() {
   // Cache stats from unified system
   const cacheStats = useMemo(
     () => getSettingsCacheStats(),
-    [getSettingsCacheStats, wallpapers.length]
+    [getSettingsCacheStats]
   );
 
   // Toast management functions

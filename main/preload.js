@@ -25,6 +25,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("set-wallpaper", { url, filename }),
   checkWallpaperExists: (filename) =>
     ipcRenderer.invoke("check-wallpaper-exists", { filename }),
+  getLocalWallpaper: (filename) =>
+    ipcRenderer.invoke("get-local-wallpaper", { filename }),
 
   // Rainmeter Skin Management
   downloadRainmeterSkin: (url, filename, skinId) =>

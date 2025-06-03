@@ -42,9 +42,17 @@ export function WallpaperModal({
         const filename = getFilename(wallpaper.id);
         const result = await window.electronAPI.checkWallpaperExists(filename);
         if (result.exists) {
-          // Use API route to serve local file instead of file:// URL
-          const localUrl = `/api/wallhaven/local/${filename}`;
-          setLocalImagePath(localUrl);
+          // Get the local wallpaper as base64 data URL
+          const localResult = await window.electronAPI.getLocalWallpaper(
+            filename
+          );
+          if (localResult.success && localResult.dataUrl) {
+            setLocalImagePath(localResult.dataUrl);
+            console.log("Loaded local wallpaper as data URL");
+          } else {
+            console.error("Failed to load local wallpaper:", localResult.error);
+            setLocalImagePath(null);
+          }
         } else {
           setLocalImagePath(null);
         }
@@ -84,9 +92,14 @@ export function WallpaperModal({
         // Show success notification
         console.log("Download completed:", result.path);
         console.log("Wallpaper saved to Pictures/Wallpapers folder");
-        // Set local image path using API route
-        const localUrl = `/api/wallhaven/local/${getFilename(wallpaper.id)}`;
-        setLocalImagePath(localUrl);
+        // Set local image path using base64 data URL
+        const filename = getFilename(wallpaper.id);
+        const localResult = await window.electronAPI.getLocalWallpaper(
+          filename
+        );
+        if (localResult.success && localResult.dataUrl) {
+          setLocalImagePath(localResult.dataUrl);
+        }
         onDownloadComplete(wallpaper.id);
       } else {
         console.error("Download failed:", result.error);
@@ -117,10 +130,15 @@ export function WallpaperModal({
         console.log(
           "Wallpaper saved to Pictures/Wallpapers folder and set as desktop background"
         );
-        // Set local image path using API route if it was downloaded
-        if (!localImagePath) {
-          const localUrl = `/api/wallhaven/local/${getFilename(wallpaper.id)}`;
-          setLocalImagePath(localUrl);
+        // Set local image path using base64 data URL if it was downloaded
+        if (!localImagePath && result.path) {
+          const filename = getFilename(wallpaper.id);
+          const localResult = await window.electronAPI.getLocalWallpaper(
+            filename
+          );
+          if (localResult.success && localResult.dataUrl) {
+            setLocalImagePath(localResult.dataUrl);
+          }
           onDownloadComplete(wallpaper.id);
         }
         onClose(); // Close modal on success

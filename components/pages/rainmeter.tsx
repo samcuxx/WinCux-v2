@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -107,79 +107,8 @@ export function RainmeterPage() {
   const { toasts, skinToasts, updateToast, removeToast, addToast } =
     useRainmeterToasts();
 
-  // Check if Rainmeter is installed when component mounts
-  useEffect(() => {
-    checkRainmeterInstallation();
-  }, []);
-
-  // Load installed skins when Rainmeter is detected
-  useEffect(() => {
-    if (rainmeterStatus === "installed") {
-      loadInstalledSkins();
-    }
-  }, [rainmeterStatus, skins]);
-
-  // Load categories when component mounts
-  useEffect(() => {
-    const loadCategories = async () => {
-      try {
-        const cats = await rainmeterSkinsAPI.getCategories();
-        setCategories(cats);
-      } catch (error) {
-        console.error("Failed to load categories:", error);
-      }
-    };
-
-    loadCategories();
-  }, []);
-
-  // Live search with debounce
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      handleSearch();
-    }, 300); // 300ms debounce
-
-    return () => clearTimeout(timeoutId);
-  }, [searchQuery, selectedCategory, sortBy]);
-
-  // Function to check if Rainmeter is installed
-  const checkRainmeterInstallation = async () => {
-    setRainmeterStatus("checking");
-    try {
-      if (typeof window.electronAPI !== "undefined") {
-        // Create a channel to receive response from the checkRainmeterInstalled handler
-        const checkListener = (_event: any, result: any) => {
-          setRainmeterStatus(result.installed ? "installed" : "not_installed");
-        };
-
-        window.electronAPI.on("rainmeter-check-result", checkListener);
-
-        // Send request to check Rainmeter installation
-        window.electronAPI.send("check-rainmeter-installation", {});
-
-        // Return cleanup function to remove the listener
-        return () => {
-          window.electronAPI.removeListener(
-            "rainmeter-check-result",
-            checkListener
-          );
-        };
-      } else {
-        // Fallback for development without Electron
-        console.warn("electronAPI not available, using mock detection");
-        // Simulate a check (replace with actual implementation)
-        setTimeout(() => {
-          setRainmeterStatus("not_installed");
-        }, 1000);
-      }
-    } catch (error) {
-      console.error("Error checking Rainmeter installation:", error);
-      setRainmeterStatus("not_installed");
-    }
-  };
-
   // Function to load installed skins from Rainmeter
-  const loadInstalledSkins = async () => {
+  const loadInstalledSkins = useCallback(async () => {
     try {
       if (typeof window.electronAPI !== "undefined") {
         // Load installed skins
@@ -245,6 +174,86 @@ export function RainmeterPage() {
       }
     } catch (error) {
       console.error("Failed to load installed skins:", error);
+    }
+  }, [skins]);
+
+  // Check if Rainmeter is installed when component mounts
+  useEffect(() => {
+    checkRainmeterInstallation();
+  }, []);
+
+  // Load installed skins when Rainmeter is detected
+  useEffect(() => {
+    if (rainmeterStatus === "installed") {
+      loadInstalledSkins();
+    }
+  }, [rainmeterStatus, loadInstalledSkins]);
+
+  // Load categories when component mounts
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const cats = await rainmeterSkinsAPI.getCategories();
+        setCategories(cats);
+      } catch (error) {
+        console.error("Failed to load categories:", error);
+      }
+    };
+
+    loadCategories();
+  }, []);
+
+  // Skin management handlers
+  const handleSearch = useCallback(async () => {
+    await search({
+      query: searchQuery || undefined,
+      category: selectedCategory === "All" ? undefined : selectedCategory,
+      sorting: sortBy,
+    });
+  }, [search, searchQuery, selectedCategory, sortBy]);
+
+  // Live search with debounce
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      handleSearch();
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, selectedCategory, sortBy, handleSearch]);
+
+  // Function to check if Rainmeter is installed
+  const checkRainmeterInstallation = async () => {
+    setRainmeterStatus("checking");
+    try {
+      if (typeof window.electronAPI !== "undefined") {
+        // Create a channel to receive response from the checkRainmeterInstalled handler
+        const checkListener = (_event: any, result: any) => {
+          setRainmeterStatus(result.installed ? "installed" : "not_installed");
+        };
+
+        window.electronAPI.on("rainmeter-check-result", checkListener);
+
+        // Send request to check Rainmeter installation
+        window.electronAPI.send("check-rainmeter-installation", {});
+
+        // Return cleanup function to remove the listener
+        return () => {
+          window.electronAPI.removeListener(
+            "rainmeter-check-result",
+            checkListener
+          );
+        };
+      } else {
+        // Fallback for development without Electron
+        console.warn("electronAPI not available, using mock detection");
+        // Simulate a check (replace with actual implementation)
+        setTimeout(() => {
+          setRainmeterStatus("not_installed");
+        }, 1000);
+      }
+    } catch (error) {
+      console.error("Error checking Rainmeter installation:", error);
+      setRainmeterStatus("not_installed");
     }
   };
 
@@ -459,15 +468,6 @@ export function RainmeterPage() {
       default:
         return null;
     }
-  };
-
-  // Skin management handlers
-  const handleSearch = async () => {
-    await search({
-      query: searchQuery || undefined,
-      category: selectedCategory === "All" ? undefined : selectedCategory,
-      sorting: sortBy,
-    });
   };
 
   const handleCategoryChange = async (category: string) => {
@@ -895,8 +895,11 @@ export function RainmeterPage() {
         subMessage: "Launching Rainmeter settings...",
       });
 
-      if (typeof window.electronAPI !== "undefined") {
-        const result = await window.electronAPI.openRainmeterConfig();
+      if (
+        typeof window.electronAPI !== "undefined" &&
+        typeof (window.electronAPI as any).openRainmeterConfig === "function"
+      ) {
+        const result = await (window.electronAPI as any).openRainmeterConfig();
 
         if (result.success) {
           updateToast(toastId, {
@@ -913,6 +916,13 @@ export function RainmeterPage() {
             duration: 8000,
           });
         }
+      } else {
+        updateToast(toastId, {
+          type: "error",
+          message: "Feature Not Available",
+          subMessage: "Rainmeter configuration opening is not yet implemented",
+          duration: 5000,
+        });
       }
     } catch (error) {
       console.error("Error opening Rainmeter configuration:", error);
@@ -1055,7 +1065,7 @@ export function RainmeterPage() {
                               installed
                             </li>
                             <li>
-                              • You'll see a success notification when
+                              • You&apos;ll see a success notification when
                               installation is complete
                             </li>
                           </ul>
@@ -1072,16 +1082,16 @@ export function RainmeterPage() {
                             </li>
                             <li>
                               • Right-click on your desktop and select{" "}
-                              <strong>"Manage"</strong>
+                              <strong>&quot;Manage&quot;</strong>
                             </li>
                             <li>
                               • Or use the{" "}
-                              <strong>"Open Rainmeter Config"</strong> button
-                              below
+                              <strong>&quot;Open Rainmeter Config&quot;</strong>{" "}
+                              button below
                             </li>
                             <li>
                               • In the Rainmeter Manager, find your skin and
-                              click <strong>"Load"</strong>
+                              click <strong>&quot;Load&quot;</strong>
                             </li>
                           </ul>
                         </div>
@@ -1096,16 +1106,17 @@ export function RainmeterPage() {
                               context menu
                             </li>
                             <li>
-                              • Choose <strong>"Settings"</strong> or{" "}
-                              <strong>"Variables"</strong> to customize
+                              • Choose <strong>&quot;Settings&quot;</strong> or{" "}
+                              <strong>&quot;Variables&quot;</strong> to
+                              customize
                             </li>
                             <li>
                               • Adjust positions by dragging skins around your
                               desktop
                             </li>
                             <li>
-                              • Use <strong>"Transparency"</strong> settings to
-                              blend with your wallpaper
+                              • Use <strong>&quot;Transparency&quot;</strong>{" "}
+                              settings to blend with your wallpaper
                             </li>
                           </ul>
                         </div>
@@ -1135,8 +1146,8 @@ export function RainmeterPage() {
                           <ol className="text-sm text-orange-800 dark:text-orange-200 space-y-1 ml-4">
                             <li>
                               1. Click the{" "}
-                              <strong>"Open Rainmeter Config"</strong> button
-                              below
+                              <strong>&quot;Open Rainmeter Config&quot;</strong>{" "}
+                              button below
                             </li>
                             <li>
                               2. In Rainmeter Manager, browse to your installed
@@ -1147,8 +1158,8 @@ export function RainmeterPage() {
                               variant) from the list
                             </li>
                             <li>
-                              4. Click the <strong>"Load"</strong> button to
-                              activate it
+                              4. Click the <strong>&quot;Load&quot;</strong>{" "}
+                              button to activate it
                             </li>
                             <li>5. The skin will appear on your desktop!</li>
                           </ol>
@@ -1183,8 +1194,8 @@ export function RainmeterPage() {
                               Skin disappears after restart:
                             </strong>
                             <p className="text-gray-600 dark:text-gray-400">
-                              Enable "Load on startup" in Rainmeter settings, or
-                              save your layout
+                              Enable &quot;Load on startup&quot; in Rainmeter
+                              settings, or save your layout
                             </p>
                           </div>
                         </div>
@@ -1252,8 +1263,9 @@ export function RainmeterPage() {
                               🎨
                             </span>
                             <span>
-                              <strong>Layer Management:</strong> Use "Stay
-                              topmost" or "On desktop" to control skin layers
+                              <strong>Layer Management:</strong> Use &quot;Stay
+                              topmost&quot; or &quot;On desktop&quot; to control
+                              skin layers
                             </span>
                           </li>
                           <li className="flex items-start space-x-2">

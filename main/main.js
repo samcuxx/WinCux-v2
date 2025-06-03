@@ -250,6 +250,60 @@ const createWindow = () => {
     }
   });
 
+  // Get local wallpaper as base64 data URL
+  ipcMain.handle("get-local-wallpaper", async (event, { filename }) => {
+    try {
+      const picturesPath = path.join(os.homedir(), "Pictures", "Wallpapers");
+      const filePath = path.join(picturesPath, filename);
+
+      // Check if file exists
+      if (!fs.existsSync(filePath)) {
+        return { success: false, error: "File not found" };
+      }
+
+      // Read the file as binary data
+      const fileBuffer = fs.readFileSync(filePath);
+
+      // Determine the MIME type based on file extension
+      const ext = filename.toLowerCase().split(".").pop();
+      let mimeType = "image/jpeg"; // default
+
+      switch (ext) {
+        case "png":
+          mimeType = "image/png";
+          break;
+        case "webp":
+          mimeType = "image/webp";
+          break;
+        case "gif":
+          mimeType = "image/gif";
+          break;
+        case "bmp":
+          mimeType = "image/bmp";
+          break;
+        case "jpg":
+        case "jpeg":
+        default:
+          mimeType = "image/jpeg";
+          break;
+      }
+
+      // Convert to base64 data URL
+      const base64Data = fileBuffer.toString("base64");
+      const dataUrl = `data:${mimeType};base64,${base64Data}`;
+
+      return {
+        success: true,
+        dataUrl: dataUrl,
+        path: filePath,
+        size: fileBuffer.length,
+      };
+    } catch (error) {
+      console.error("Error reading local wallpaper:", error);
+      return { success: false, error: error.message };
+    }
+  });
+
   // Rainmeter detection
   ipcMain.on("check-rainmeter-installation", async (event) => {
     try {

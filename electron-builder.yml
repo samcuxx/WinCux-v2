@@ -1,6 +1,6 @@
-appId: "io.github.rbfraphael.electron-next"
+appId: "app.samcux.desktoppro"
 productName: "Desktop Pro"
-copyright: "Copyright (c) 2023 RBFraphael"
+copyright: "Copyright (c) 2025 SamCux"
 win:
   target: ["dir", "portable", "zip"]
   icon: "resources/icon.ico"
