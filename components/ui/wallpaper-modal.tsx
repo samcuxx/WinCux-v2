@@ -120,10 +120,17 @@ export function WallpaperModal({
 
     setIsSettingWallpaper(true);
     try {
-      const result = await window.electronAPI.setWallpaper(
-        wallpaper.fullRes,
-        getFilename(wallpaper.id)
-      );
+      // For local wallpapers, use the path and filename directly
+      const filename =
+        wallpaper.source === "local"
+          ? (wallpaper as any).filename
+          : getFilename(wallpaper.id);
+      const url =
+        wallpaper.source === "local"
+          ? (wallpaper as any).path
+          : wallpaper.fullRes;
+
+      const result = await window.electronAPI.setWallpaper(url, filename);
 
       if (result.success) {
         console.log("Wallpaper set successfully:", result.path);
@@ -245,14 +252,21 @@ export function WallpaperModal({
                 </div>
                 {wallpaper.tags && wallpaper.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-2">
-                    {wallpaper.tags.slice(0, 8).map((tag, index) => (
-                      <span
-                        key={index}
-                        className="px-2 py-1 text-xs bg-white/20 rounded-full text-white/80"
-                      >
-                        {tag}
-                      </span>
-                    ))}
+                    {wallpaper.tags.slice(0, 8).map((tag, index) => {
+                      // Handle both string tags and object tags for backward compatibility
+                      const tagText =
+                        typeof tag === "string"
+                          ? tag
+                          : (tag as any)?.name || (tag as any)?.alias || "tag";
+                      return (
+                        <span
+                          key={index}
+                          className="px-2 py-1 text-xs bg-white/20 rounded-full text-white/80"
+                        >
+                          {tagText}
+                        </span>
+                      );
+                    })}
                   </div>
                 )}
               </div>

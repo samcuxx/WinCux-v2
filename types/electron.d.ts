@@ -32,6 +32,28 @@ export interface ElectronAPI {
     size?: number;
     error?: string;
   }>;
+  listLocalWallpapers: () => Promise<{
+    success: boolean;
+    wallpapers: any[];
+    error?: string;
+  }>;
+  getLocalWallpaperThumbnail: (filename: string) => Promise<{
+    success: boolean;
+    thumbnailUrl?: string;
+    path?: string;
+    size?: number;
+    error?: string;
+  }>;
+  deleteLocalWallpaper: (filename: string) => Promise<{
+    success: boolean;
+    path?: string;
+    error?: string;
+  }>;
+  openWallpapersFolder: () => Promise<{
+    success: boolean;
+    path?: string;
+    error?: string;
+  }>;
 
   // Rainmeter Skin Management
   downloadRainmeterSkin: (

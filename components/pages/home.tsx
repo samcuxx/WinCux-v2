@@ -26,7 +26,7 @@ export function HomePage() {
             size="lg"
             className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
           >
-            <Image className="w-5 h-5 mr-3" aria-hidden="true" />
+            <Image className="w-5 h-5 mr-3" />
             Browse Wallpapers
             <ArrowRight className="w-5 h-5 ml-3" />
           </Button>
@@ -47,13 +47,15 @@ export function HomePage() {
           <CardContent className="p-8">
             <div className="flex items-center space-x-4 mb-6">
               <div className="flex items-center justify-center w-14 h-14 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full group-hover:scale-110 transition-transform duration-300">
-                <Image className="w-7 h-7 text-white" aria-hidden="true" />
+                <Image className="w-7 h-7 text-white" />
               </div>
               <div>
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white">
                   Wallpaper Gallery
                 </h3>
-                <p className="text-muted-foreground">1M+ curated wallpapers</p>
+                <p className="text-muted-foreground">
+                  1M+ curated wallpapers
+                </p>
               </div>
             </div>
             <p className="text-muted-foreground mb-4">

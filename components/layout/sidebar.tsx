@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Home, Image, Gauge, Settings, Monitor } from "lucide-react";
+import { Home, Image, Gauge, Settings, Download } from "lucide-react";
 
 const navigation = [
   {
@@ -18,6 +18,12 @@ const navigation = [
     href: "/wallpapers",
     icon: Image,
     gradient: "from-blue-600 to-purple-600",
+  },
+  {
+    name: "Downloads",
+    href: "/downloads",
+    icon: Download,
+    gradient: "from-purple-600 to-pink-600",
   },
   {
     name: "Rainmeter",
@@ -36,30 +42,40 @@ const navigation = [
 export function Sidebar() {
   const pathname = usePathname();
 
+  // Function to determine if a navigation item is active
+  const isActiveRoute = (href: string) => {
+    if (href === "/") {
+      // Home page - exact match only
+      return pathname === "/" || pathname === "";
+    }
+    // Other pages - match if pathname starts with the href
+    return pathname.startsWith(href);
+  };
+
   return (
-    <div className="w-64   border-rflex flex-col">
+    <div className="w-64 border-r flex flex-col">
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-2">
         {navigation.map((item) => {
           const Icon = item.icon;
-          const isActive = pathname === item.href;
+          const isActive = isActiveRoute(item.href);
 
           return (
             <Link
               key={item.name}
               href={item.href}
               className={cn(
-                "flex items-center space-x-3 px-4 py-2 rounded-full transition-all duration-200 group",
+                "flex items-center space-x-3 px-4 py-2 rounded-full transition-all duration-200 group relative",
                 isActive
-                  ? "bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/50 dark:to-purple-950/50 text-blue-700 dark:text-blue-300"
-                  : "hover:bg-gray-100/50 dark:hover:bg-gray-800/50 text-white dark:text-gray-300"
+                  ? "bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/50 dark:to-purple-950/50 text-blue-700 dark:text-blue-300 shadow-sm"
+                  : "hover:bg-gray-100/50 dark:hover:bg-gray-800/50 text-gray-700 dark:text-gray-300"
               )}
             >
               <div
                 className={cn(
                   "flex items-center justify-center w-10 h-10 rounded-lg transition-all duration-200",
                   isActive
-                    ? `bg-gradient-to-r ${item.gradient}`
+                    ? `bg-gradient-to-r ${item.gradient} shadow-lg`
                     : "bg-gray-200/50 dark:bg-gray-700/50 group-hover:bg-gradient-to-r group-hover:" +
                         item.gradient
                 )}
@@ -69,11 +85,18 @@ export function Sidebar() {
                     "w-5 h-5 transition-colors duration-200",
                     isActive
                       ? "text-white"
-                      : "text-white dark:text-gray-400 group-hover:text-white"
+                      : "text-gray-600 dark:text-gray-400 group-hover:text-white"
                   )}
                 />
               </div>
-              <span className="font-medium">{item.name}</span>
+              <span
+                className={cn(
+                  "font-medium transition-colors duration-200",
+                  isActive ? "text-blue-700 dark:text-blue-300" : ""
+                )}
+              >
+                {item.name}
+              </span>
             </Link>
           );
         })}
