@@ -437,35 +437,45 @@ function setupWallpaperHandlers() {
               console.warn("Could not determine image dimensions for:", file);
             }
 
-            // Create a wallpaper object similar to the online ones
+            // Create a wallpaper object compatible with LocalWallpaper interface
             const wallpaper = {
               id: `local_${file.replace(/\.[^/.]+$/, "")}`, // Remove extension for ID
-              url: filePath,
-              short_url: filePath,
+              title: file.replace(/\.[^/.]+$/, ""), // Filename without extension
+              description: `Local wallpaper: ${file}`,
+              category: "general",
+              resolution: resolution,
+              size: `${(stats.size / 1024 / 1024).toFixed(1)} MB`,
+              downloads: 1,
+              rating: 5.0,
+              tags: ["local", "downloaded"],
+              author: "Local",
+              dateAdded: stats.birthtime.toISOString(),
+              colors: ["#000000", "#ffffff"],
+              thumbnail: filePath,
+              preview: filePath,
+              fullRes: filePath,
+              source: "local",
+              sourceId: file.replace(/\.[^/.]+$/, ""),
+              purity: "sfw",
               views: 0,
               favorites: 0,
-              source: "local",
-              purity: "sfw",
-              category: "general",
-              dimension_x: 1920, // Default, could be enhanced
-              dimension_y: 1080, // Default, could be enhanced
-              resolution: resolution,
-              ratio: "16:9", // Default
-              file_size: stats.size,
-              file_type: ext.substring(1), // Remove the dot
-              created_at: stats.birthtime.toISOString(),
-              colors: [],
-              path: filePath,
+              // Extended properties for downloads page
               filename: file,
-              tags: ["local", "downloaded"], // Simple string array instead of objects
+              path: filePath,
+              file_size: stats.size,
+              // Legacy properties for compatibility
+              url: filePath,
+              short_url: filePath,
+              dimension_x: 1920,
+              dimension_y: 1080,
+              ratio: "16:9",
+              file_type: ext.substring(1),
+              created_at: stats.birthtime.toISOString(),
               thumbs: {
                 large: filePath,
                 original: filePath,
                 small: filePath,
               },
-              // Use file path for faster loading - we'll convert to base64 only when needed
-              thumbnail: filePath,
-              fullRes: filePath,
             };
 
             wallpapers.push(wallpaper);

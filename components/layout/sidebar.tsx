@@ -91,7 +91,7 @@ export function Sidebar() {
               </div>
               <span
                 className={cn(
-                  "font-medium transition-colors duration-200",
+                  "font-medium transition-colors duration-200 text-white",
                   isActive ? "text-blue-700 dark:text-blue-300" : ""
                 )}
               >
