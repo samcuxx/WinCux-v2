@@ -18,16 +18,13 @@ import { InfiniteScrollTrigger } from "@/components/wallpapers/infinite-scroll-t
 import { LoadingState } from "@/components/wallpapers/loading-state";
 import { EmptyState } from "@/components/wallpapers/empty-state";
 import { WallpaperSkeleton } from "@/components/wallpapers/wallpaper-skeleton";
-import { ToastNotifications } from "@/components/wallpapers/toast-notifications";
 import { Button } from "@/components/ui/button";
 import { Loader2, RefreshCw } from "lucide-react";
-
-interface Toast {
-  id: string;
-  type: "success" | "error" | "loading";
-  message: string;
-  subMessage?: string;
-}
+import {
+  showTopBarNotification,
+  updateTopBarNotification,
+  hideTopBarNotification,
+} from "@/components/layout/top-bar";
 
 export function WallpapersPage() {
   const {
@@ -46,7 +43,6 @@ export function WallpapersPage() {
   const [downloadedWallpapers, setDownloadedWallpapers] = useState<Set<string>>(
     new Set()
   );
-  const [toasts, setToasts] = useState<Toast[]>([]);
   const [showCacheStats, setShowCacheStats] = useState(false);
 
   // Use the wallpaper hook with search options
@@ -80,30 +76,7 @@ export function WallpapersPage() {
     [getSettingsCacheStats]
   );
 
-  // Toast management functions
-  const addToast = (toast: Omit<Toast, "id">) => {
-    const id = Date.now().toString();
-    setToasts((prev) => [...prev, { ...toast, id }]);
-
-    // Auto remove toast after 4 seconds (except loading toasts)
-    if (toast.type !== "loading") {
-      setTimeout(() => {
-        removeToast(id);
-      }, 4000);
-    }
-
-    return id;
-  };
-
-  const removeToast = (id: string) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id));
-  };
-
-  const updateToast = (id: string, updates: Partial<Toast>) => {
-    setToasts((prev) =>
-      prev.map((toast) => (toast.id === id ? { ...toast, ...updates } : toast))
-    );
-  };
+  // Notification management using top bar
 
   // Handle search
   const handleSearch = async () => {
@@ -156,8 +129,8 @@ export function WallpapersPage() {
     const filename = `wallpaper_${wallpaper.id}.jpg`;
 
     if (window.electronAPI) {
-      // Show loading toast
-      const toastId = addToast({
+      // Show loading notification in top bar
+      const notificationId = showTopBarNotification({
         type: "loading",
         message: "Downloading wallpaper...",
         subMessage: `ID: ${wallpaper.id}`,
@@ -168,15 +141,12 @@ export function WallpapersPage() {
         .downloadWallpaper(wallpaper.fullRes, filename)
         .then((result) => {
           if (result.success) {
-            // Update toast to success
-            updateToast(toastId, {
+            // Update notification to success
+            updateTopBarNotification(notificationId, {
               type: "success",
               message: "Wallpaper downloaded successfully!",
               subMessage: "Saved to Pictures/Wallpapers folder",
             });
-
-            // Auto remove success toast
-            setTimeout(() => removeToast(toastId), 4000);
 
             // Mark wallpaper as downloaded immediately
             setDownloadedWallpapers((prev) => {
@@ -185,32 +155,26 @@ export function WallpapersPage() {
               return newSet;
             });
           } else {
-            // Update toast to error
-            updateToast(toastId, {
+            // Update notification to error
+            updateTopBarNotification(notificationId, {
               type: "error",
               message: "Download failed",
               subMessage: result.error || "Please try again",
             });
-
-            // Auto remove error toast
-            setTimeout(() => removeToast(toastId), 4000);
           }
         })
         .catch((error) => {
-          // Update toast to error
-          updateToast(toastId, {
+          // Update notification to error
+          updateTopBarNotification(notificationId, {
             type: "error",
             message: "Download failed",
             subMessage: "Network error occurred",
           });
-
-          // Auto remove error toast
-          setTimeout(() => removeToast(toastId), 4000);
           console.error("Download error:", error);
         });
     } else {
       // Fallback for browser environment
-      addToast({
+      showTopBarNotification({
         type: "success",
         message: "Download started!",
         subMessage: "Check your downloads folder",
@@ -243,8 +207,8 @@ export function WallpapersPage() {
     const filename = `wallpaper_${wallpaper.id}.jpg`;
 
     if (window.electronAPI) {
-      // Show loading toast
-      const toastId = addToast({
+      // Show loading notification in top bar
+      const notificationId = showTopBarNotification({
         type: "loading",
         message: "Setting wallpaper...",
         subMessage: `ID: ${wallpaper.id}`,
@@ -255,15 +219,12 @@ export function WallpapersPage() {
         .setWallpaper(wallpaper.fullRes, filename)
         .then((result) => {
           if (result.success) {
-            // Update toast to success
-            updateToast(toastId, {
+            // Update notification to success
+            updateTopBarNotification(notificationId, {
               type: "success",
               message: "Wallpaper set successfully!",
               subMessage: "Your desktop background has been updated",
             });
-
-            // Auto remove success toast
-            setTimeout(() => removeToast(toastId), 4000);
 
             // Mark wallpaper as downloaded since it was saved to disk
             setDownloadedWallpapers((prev) => {
@@ -272,27 +233,21 @@ export function WallpapersPage() {
               return newSet;
             });
           } else {
-            // Update toast to error
-            updateToast(toastId, {
+            // Update notification to error
+            updateTopBarNotification(notificationId, {
               type: "error",
               message: "Failed to set wallpaper",
               subMessage: result.error || "Please try again",
             });
-
-            // Auto remove error toast
-            setTimeout(() => removeToast(toastId), 4000);
           }
         })
         .catch((error) => {
-          // Update toast to error
-          updateToast(toastId, {
+          // Update notification to error
+          updateTopBarNotification(notificationId, {
             type: "error",
             message: "Failed to set wallpaper",
             subMessage: "An error occurred",
           });
-
-          // Auto remove error toast
-          setTimeout(() => removeToast(toastId), 4000);
           console.error("Set wallpaper error:", error);
         });
     } else {
@@ -338,7 +293,7 @@ export function WallpapersPage() {
 
   const handleClearCache = () => {
     clearSettingsCache();
-    addToast({
+    showTopBarNotification({
       type: "success",
       message: "Cache cleared successfully",
       subMessage: "Fresh data will be loaded on next search",
@@ -485,9 +440,6 @@ export function WallpapersPage() {
 
       {/* Source Status Component */}
       {/* <WallpaperSourceStatus /> */}
-
-      {/* Toast Notifications */}
-      <ToastNotifications toasts={toasts} onRemoveToast={removeToast} />
     </div>
   );
 }

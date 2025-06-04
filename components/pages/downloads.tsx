@@ -16,6 +16,11 @@ import {
   Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  showTopBarNotification,
+  updateTopBarNotification,
+  hideTopBarNotification,
+} from "@/components/layout/top-bar";
 
 // Extended interface for local wallpapers with additional properties
 interface ExtendedLocalWallpaper extends LocalWallpaper {
@@ -100,13 +105,6 @@ function OptimizedThumbnail({
   );
 }
 
-interface Toast {
-  id: string;
-  type: "success" | "error" | "loading";
-  message: string;
-  subMessage?: string;
-}
-
 export function DownloadsPage() {
   const [localWallpapers, setLocalWallpapers] = useState<
     ExtendedLocalWallpaper[]
@@ -117,32 +115,8 @@ export function DownloadsPage() {
     useState<ExtendedLocalWallpaper | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [toasts, setToasts] = useState<Toast[]>([]);
 
-  // Toast management functions
-  const addToast = (toast: Omit<Toast, "id">) => {
-    const id = Date.now().toString();
-    setToasts((prev) => [...prev, { ...toast, id }]);
-
-    // Auto remove toast after 4 seconds (except loading toasts)
-    if (toast.type !== "loading") {
-      setTimeout(() => {
-        removeToast(id);
-      }, 4000);
-    }
-
-    return id;
-  };
-
-  const removeToast = (id: string) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id));
-  };
-
-  const updateToast = (id: string, updates: Partial<Toast>) => {
-    setToasts((prev) =>
-      prev.map((toast) => (toast.id === id ? { ...toast, ...updates } : toast))
-    );
-  };
+  // Notification management using top bar
 
   // Load local wallpapers
   const loadLocalWallpapers = async () => {
@@ -209,14 +183,14 @@ export function DownloadsPage() {
     e.stopPropagation();
 
     if (!window.electronAPI) {
-      addToast({
+      showTopBarNotification({
         type: "error",
         message: "Electron API not available",
       });
       return;
     }
 
-    const toastId = addToast({
+    const notificationId = showTopBarNotification({
       type: "loading",
       message: "Setting wallpaper...",
       subMessage: wallpaper.filename,
@@ -230,28 +204,25 @@ export function DownloadsPage() {
       );
 
       if (result.success) {
-        updateToast(toastId, {
+        updateTopBarNotification(notificationId, {
           type: "success",
           message: "Wallpaper set successfully!",
           subMessage: wallpaper.filename,
         });
       } else {
-        updateToast(toastId, {
+        updateTopBarNotification(notificationId, {
           type: "error",
           message: "Failed to set wallpaper",
           subMessage: result.error || "Please try again",
         });
       }
     } catch (error) {
-      updateToast(toastId, {
+      updateTopBarNotification(notificationId, {
         type: "error",
         message: "Error setting wallpaper",
         subMessage: error instanceof Error ? error.message : "Please try again",
       });
     }
-
-    // Auto remove toast
-    setTimeout(() => removeToast(toastId), 4000);
   };
 
   const handleDeleteWallpaper = async (
@@ -261,14 +232,14 @@ export function DownloadsPage() {
     e.stopPropagation();
 
     if (!window.electronAPI) {
-      addToast({
+      showTopBarNotification({
         type: "error",
         message: "Electron API not available",
       });
       return;
     }
 
-    const toastId = addToast({
+    const notificationId = showTopBarNotification({
       type: "loading",
       message: "Deleting wallpaper...",
       subMessage: wallpaper.filename,
@@ -280,7 +251,7 @@ export function DownloadsPage() {
       );
 
       if (result.success) {
-        updateToast(toastId, {
+        updateTopBarNotification(notificationId, {
           type: "success",
           message: "Wallpaper deleted successfully!",
           subMessage: wallpaper.filename,
@@ -289,22 +260,19 @@ export function DownloadsPage() {
         // Remove the wallpaper from the local state
         setLocalWallpapers((prev) => prev.filter((w) => w.id !== wallpaper.id));
       } else {
-        updateToast(toastId, {
+        updateTopBarNotification(notificationId, {
           type: "error",
           message: "Failed to delete wallpaper",
           subMessage: result.error || "Please try again",
         });
       }
     } catch (error) {
-      updateToast(toastId, {
+      updateTopBarNotification(notificationId, {
         type: "error",
         message: "Error deleting wallpaper",
         subMessage: error instanceof Error ? error.message : "Please try again",
       });
     }
-
-    // Auto remove toast
-    setTimeout(() => removeToast(toastId), 4000);
   };
 
   const handleRefresh = () => {
@@ -313,7 +281,7 @@ export function DownloadsPage() {
 
   const openWallpapersFolder = async () => {
     if (!window.electronAPI) {
-      addToast({
+      showTopBarNotification({
         type: "error",
         message: "Electron API not available",
       });
@@ -323,20 +291,20 @@ export function DownloadsPage() {
     try {
       const result = await window.electronAPI.openWallpapersFolder();
       if (result.success) {
-        addToast({
+        showTopBarNotification({
           type: "success",
           message: "Opened wallpapers folder",
           subMessage: result.path,
         });
       } else {
-        addToast({
+        showTopBarNotification({
           type: "error",
           message: "Failed to open folder",
           subMessage: result.error,
         });
       }
     } catch (error) {
-      addToast({
+      showTopBarNotification({
         type: "error",
         message: "Error opening folder",
         subMessage: error instanceof Error ? error.message : "Unknown error",
@@ -575,28 +543,7 @@ export function DownloadsPage() {
         />
       )}
 
-      {/* Toast Notifications */}
-      <div className="fixed bottom-4 right-4 space-y-2 z-50">
-        {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            className={cn(
-              "p-4 rounded-lg shadow-lg backdrop-blur-sm border max-w-sm",
-              toast.type === "success" &&
-                "bg-green-50/90 dark:bg-green-900/90 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200",
-              toast.type === "error" &&
-                "bg-red-50/90 dark:bg-red-900/90 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200",
-              toast.type === "loading" &&
-                "bg-blue-50/90 dark:bg-blue-900/90 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200"
-            )}
-          >
-            <p className="font-medium">{toast.message}</p>
-            {toast.subMessage && (
-              <p className="text-sm opacity-75 mt-1">{toast.subMessage}</p>
-            )}
-          </div>
-        ))}
-      </div>
+
     </div>
   );
 }

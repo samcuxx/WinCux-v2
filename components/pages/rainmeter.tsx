@@ -45,8 +45,11 @@ import { SkinHeader } from "@/components/rainmeter/skin-header";
 import { SkinSearchFilters } from "@/components/rainmeter/skin-search-filters";
 import { SkinGrid } from "@/components/rainmeter/skin-grid";
 import { SkinModal } from "@/components/ui/skin-modal";
-import { useRainmeterToasts } from "@/hooks/use-rainmeter-toasts";
-import { RainmeterToastNotifications } from "@/components/rainmeter/rainmeter-toast-notifications";
+import {
+  showTopBarNotification,
+  updateTopBarNotification,
+  hideTopBarNotification,
+} from "@/components/layout/top-bar";
 
 export function RainmeterPage() {
   const [rainmeterStatus, setRainmeterStatus] = useState<
@@ -103,9 +106,7 @@ export function RainmeterPage() {
     autoLoad: true,
   });
 
-  // Use toast notifications
-  const { toasts, skinToasts, updateToast, removeToast, addToast } =
-    useRainmeterToasts();
+  // Notification management using top bar
 
   // Function to load installed skins from Rainmeter
   const loadInstalledSkins = useCallback(async () => {
@@ -498,7 +499,11 @@ export function RainmeterPage() {
 
     try {
       setDownloadingItems((prev) => new Set(Array.from(prev).concat(skin.id)));
-      const toastId = skinToasts.downloading(skin.name);
+      const notificationId = showTopBarNotification({
+        type: "loading",
+        message: "Downloading skin...",
+        subMessage: skin.name,
+      });
 
       if (typeof window.electronAPI !== "undefined") {
         const filename = `${skin.name.replace(
@@ -512,13 +517,12 @@ export function RainmeterPage() {
         );
 
         if (result.success) {
-          updateToast(toastId, {
+          updateTopBarNotification(notificationId, {
             type: "success",
             message: `Downloaded ${skin.name}`,
             subMessage: result.alreadyExists
               ? "File already exists"
               : "Download completed",
-            duration: 3000,
           });
 
           // Mark as downloaded
@@ -527,20 +531,19 @@ export function RainmeterPage() {
           );
           saveDownloadedSkin(skin.id);
         } else {
-          updateToast(toastId, {
+          updateTopBarNotification(notificationId, {
             type: "error",
             message: `Failed to download ${skin.name}`,
             subMessage: result.error,
-            duration: 8000,
           });
         }
       }
     } catch (error) {
-      skinToasts.error(
-        "download",
-        skin.name,
-        error instanceof Error ? error.message : "Unknown error"
-      );
+      showTopBarNotification({
+        type: "error",
+        message: `Failed to download ${skin.name}`,
+        subMessage: error instanceof Error ? error.message : "Unknown error",
+      });
     } finally {
       setDownloadingItems((prev) => {
         const newSet = new Set(Array.from(prev));
@@ -563,7 +566,11 @@ export function RainmeterPage() {
         /[^a-zA-Z0-9]/g,
         "_"
       )}_Rainmeter_Skin.rmskin`;
-      const toastId = skinToasts.installing(skin.name);
+      const notificationId = showTopBarNotification({
+        type: "loading",
+        message: "Installing skin...",
+        subMessage: skin.name,
+      });
 
       if (typeof window.electronAPI !== "undefined") {
         // Download first
@@ -574,11 +581,10 @@ export function RainmeterPage() {
         );
 
         if (!downloadResult.success) {
-          updateToast(toastId, {
+          updateTopBarNotification(notificationId, {
             type: "error",
             message: `Failed to download ${skin.name}`,
             subMessage: downloadResult.error,
-            duration: 8000,
           });
           return;
         }
@@ -591,11 +597,10 @@ export function RainmeterPage() {
         );
 
         if (installResult.success) {
-          updateToast(toastId, {
+          updateTopBarNotification(notificationId, {
             type: "success",
             message: `Installed ${skin.name}`,
             subMessage: "Skin is ready to use",
-            duration: 3000,
           });
 
           // Mark as downloaded and installed
@@ -607,20 +612,19 @@ export function RainmeterPage() {
           );
           saveDownloadedSkin(skin.id);
         } else {
-          updateToast(toastId, {
+          updateTopBarNotification(notificationId, {
             type: "error",
             message: `Failed to install ${skin.name}`,
             subMessage: installResult.error,
-            duration: 8000,
           });
         }
       }
     } catch (error) {
-      skinToasts.error(
-        "install",
-        skin.name,
-        error instanceof Error ? error.message : "Unknown error"
-      );
+      showTopBarNotification({
+        type: "error",
+        message: `Failed to install ${skin.name}`,
+        subMessage: error instanceof Error ? error.message : "Unknown error",
+      });
     } finally {
       setInstallingItems((prev) => {
         const newSet = new Set(Array.from(prev));
@@ -652,7 +656,11 @@ export function RainmeterPage() {
     e.stopPropagation();
 
     try {
-      const toastId = skinToasts.enabling(skin.name);
+      const notificationId = showTopBarNotification({
+        type: "loading",
+        message: "Enabling skin...",
+        subMessage: skin.name,
+      });
 
       if (typeof window.electronAPI !== "undefined") {
         const result = await window.electronAPI.toggleRainmeterSkin(
@@ -663,27 +671,25 @@ export function RainmeterPage() {
         );
 
         if (result.success) {
-          updateToast(toastId, {
+          updateTopBarNotification(notificationId, {
             type: "success",
             message: `Enabled ${skin.name}`,
             subMessage: "Skin is now active on your desktop",
-            duration: 3000,
           });
         } else {
-          updateToast(toastId, {
+          updateTopBarNotification(notificationId, {
             type: "error",
             message: `Failed to enable ${skin.name}`,
             subMessage: result.error,
-            duration: 8000,
           });
         }
       }
     } catch (error) {
-      skinToasts.error(
-        "enable",
-        skin.name,
-        error instanceof Error ? error.message : "Unknown error"
-      );
+      showTopBarNotification({
+        type: "error",
+        message: `Failed to enable ${skin.name}`,
+        subMessage: error instanceof Error ? error.message : "Unknown error",
+      });
     }
   };
 
@@ -691,7 +697,11 @@ export function RainmeterPage() {
     e.stopPropagation();
 
     try {
-      const toastId = skinToasts.configuring(skin.name);
+      const notificationId = showTopBarNotification({
+        type: "loading",
+        message: "Opening configuration...",
+        subMessage: skin.name,
+      });
 
       if (typeof window.electronAPI !== "undefined") {
         const result = await window.electronAPI.configureRainmeterSkin(
@@ -701,27 +711,25 @@ export function RainmeterPage() {
         );
 
         if (result.success) {
-          updateToast(toastId, {
+          updateTopBarNotification(notificationId, {
             type: "success",
             message: `Configuration opened for ${skin.name}`,
             subMessage: "Rainmeter settings dialog launched",
-            duration: 3000,
           });
         } else {
-          updateToast(toastId, {
+          updateTopBarNotification(notificationId, {
             type: "error",
             message: `Failed to configure ${skin.name}`,
             subMessage: result.error,
-            duration: 8000,
           });
         }
       }
     } catch (error) {
-      skinToasts.error(
-        "configure",
-        skin.name,
-        error instanceof Error ? error.message : "Unknown error"
-      );
+      showTopBarNotification({
+        type: "error",
+        message: `Failed to configure ${skin.name}`,
+        subMessage: error instanceof Error ? error.message : "Unknown error",
+      });
     }
   };
 
@@ -729,8 +737,9 @@ export function RainmeterPage() {
     e.stopPropagation();
 
     try {
-      const toastId = addToast(`Uninstalling ${skin.name}`, {
+      const notificationId = showTopBarNotification({
         type: "loading",
+        message: `Uninstalling ${skin.name}`,
         subMessage: "Removing skin files...",
       });
 
@@ -794,11 +803,10 @@ export function RainmeterPage() {
             );
 
             if (result.success) {
-              updateToast(toastId, {
+              updateTopBarNotification(notificationId, {
                 type: "success",
                 message: `Uninstalled ${skin.name}`,
                 subMessage: "Skin has been removed from your system",
-                duration: 3000,
               });
 
               // Remove from installed skins
@@ -811,11 +819,10 @@ export function RainmeterPage() {
               // Reload installed skins to ensure consistency
               await loadInstalledSkins();
             } else {
-              updateToast(toastId, {
+              updateTopBarNotification(notificationId, {
                 type: "error",
                 message: `Failed to uninstall ${skin.name}`,
                 subMessage: result.error || "Unknown error",
-                duration: 8000,
               });
             }
           } else {
@@ -831,11 +838,10 @@ export function RainmeterPage() {
             );
 
             if (result.success) {
-              updateToast(toastId, {
+              updateTopBarNotification(notificationId, {
                 type: "success",
                 message: `Uninstalled ${skin.name}`,
                 subMessage: "Skin has been removed from your system",
-                duration: 3000,
               });
 
               // Remove from installed skins
@@ -848,31 +854,29 @@ export function RainmeterPage() {
               // Reload installed skins to ensure consistency
               await loadInstalledSkins();
             } else {
-              updateToast(toastId, {
+              updateTopBarNotification(notificationId, {
                 type: "error",
                 message: `Cannot find installed skin "${skin.name}"`,
                 subMessage:
                   "The skin may not be properly installed or may have been moved",
-                duration: 8000,
               });
             }
           }
         } else {
-          updateToast(toastId, {
+          updateTopBarNotification(notificationId, {
             type: "error",
             message: `Failed to get installed skins list`,
             subMessage: "Cannot proceed with uninstall",
-            duration: 8000,
           });
         }
       }
     } catch (error) {
       console.error("Uninstall error:", error);
-      skinToasts.error(
-        "uninstall",
-        skin.name,
-        error instanceof Error ? error.message : "Unknown error"
-      );
+      showTopBarNotification({
+        type: "error",
+        message: `Failed to uninstall ${skin.name}`,
+        subMessage: error instanceof Error ? error.message : "Unknown error",
+      });
     }
   };
 
@@ -890,8 +894,9 @@ export function RainmeterPage() {
   // Function to open Rainmeter main configuration
   const handleOpenRainmeterConfig = async () => {
     try {
-      const toastId = addToast("Opening Rainmeter Configuration", {
+      const notificationId = showTopBarNotification({
         type: "loading",
+        message: "Opening Rainmeter Configuration",
         subMessage: "Launching Rainmeter settings...",
       });
 
@@ -902,46 +907,37 @@ export function RainmeterPage() {
         const result = await (window.electronAPI as any).openRainmeterConfig();
 
         if (result.success) {
-          updateToast(toastId, {
+          updateTopBarNotification(notificationId, {
             type: "success",
             message: "Rainmeter Configuration Opened",
             subMessage: "Settings window is now available",
-            duration: 3000,
           });
         } else {
-          updateToast(toastId, {
+          updateTopBarNotification(notificationId, {
             type: "error",
             message: "Failed to Open Configuration",
             subMessage: result.error || "Unknown error occurred",
-            duration: 8000,
           });
         }
       } else {
-        updateToast(toastId, {
+        updateTopBarNotification(notificationId, {
           type: "error",
           message: "Feature Not Available",
           subMessage: "Rainmeter configuration opening is not yet implemented",
-          duration: 5000,
         });
       }
     } catch (error) {
       console.error("Error opening Rainmeter configuration:", error);
-      addToast("Failed to open Rainmeter configuration", {
+      showTopBarNotification({
         type: "error",
+        message: "Failed to open Rainmeter configuration",
         subMessage: error instanceof Error ? error.message : "Unknown error",
-        duration: 8000,
       });
     }
   };
 
   return (
     <div className="space-y-6">
-      {/* Toast Notifications */}
-      <RainmeterToastNotifications
-        toasts={toasts}
-        onRemoveToast={removeToast}
-      />
-
       {/* Rainmeter Installation Status - Only show if not installed */}
       {rainmeterStatus === "not_installed" && (
         <Card className="border-0 shadow-xl bg-white/80 dark:bg-gray-950/80 backdrop-blur-sm">
