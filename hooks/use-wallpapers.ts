@@ -25,7 +25,7 @@ interface UseWallpapersResult {
   cacheAge?: number;
   refresh: () => Promise<void>;
   loadMore: () => Promise<void>;
-  search: (options: SearchOptions) => Promise<void>;
+  search: (options: SearchOptions, advancedFilters?: any) => Promise<void>;
   clearCache: () => void;
   getCacheStats: () => any;
 }
@@ -58,6 +58,8 @@ export function useWallpapers(
   const [cacheAge, setCacheAge] = useState<number>();
   const [currentPage, setCurrentPage] = useState(1);
   const [currentOptions, setCurrentOptions] = useState<SearchOptions>(options);
+  const [currentAdvancedFilters, setCurrentAdvancedFilters] =
+    useState<any>(null);
 
   const isInitialized = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -120,7 +122,8 @@ export function useWallpapers(
   const performSearch = useCallback(
     async (
       searchOptions: SearchOptions,
-      showLoading = true
+      showLoading = true,
+      advancedFilters?: any
     ): Promise<SearchResult | null> => {
       try {
         // Cancel any ongoing request
@@ -135,11 +138,14 @@ export function useWallpapers(
         }
         setError(null);
 
-        const result = await wallpaperProvider.search({
-          ...searchOptions,
-          purity: getPuritySetting(),
-          page: 1,
-        });
+        const result = await wallpaperProvider.search(
+          {
+            ...searchOptions,
+            purity: getPuritySetting(),
+            page: 1,
+          },
+          advancedFilters
+        );
 
         // Check if request was aborted
         if (abortControllerRef.current?.signal.aborted) {
@@ -153,6 +159,7 @@ export function useWallpapers(
         setCacheAge(result.cacheAge);
         setCurrentPage(1);
         setCurrentOptions(searchOptions);
+        setCurrentAdvancedFilters(advancedFilters || null);
         setError(null);
 
         console.log("Search completed:", {
@@ -185,15 +192,18 @@ export function useWallpapers(
   );
 
   const search = useCallback(
-    async (searchOptions: SearchOptions): Promise<void> => {
-      await performSearch(searchOptions, true);
+    async (
+      searchOptions: SearchOptions,
+      advancedFilters?: any
+    ): Promise<void> => {
+      await performSearch(searchOptions, true, advancedFilters);
     },
     [performSearch]
   );
 
   const refresh = useCallback(async (): Promise<void> => {
-    await performSearch(currentOptions, true);
-  }, [currentOptions, performSearch]);
+    await performSearch(currentOptions, true, currentAdvancedFilters);
+  }, [currentOptions, currentAdvancedFilters, performSearch]);
 
   const loadMore = useCallback(async (): Promise<void> => {
     if (isLoadingMore || !hasNextPage || isLoading) {
@@ -214,11 +224,14 @@ export function useWallpapers(
         options: currentOptions,
       });
 
-      const result = await wallpaperProvider.loadMore({
-        ...currentOptions,
-        purity: getPuritySetting(),
-        page: currentPage,
-      });
+      const result = await wallpaperProvider.loadMore(
+        {
+          ...currentOptions,
+          purity: getPuritySetting(),
+          page: currentPage,
+        },
+        currentAdvancedFilters
+      );
 
       // Append new wallpapers to existing ones with deduplication
       setWallpapers((prev) => {

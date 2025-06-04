@@ -172,7 +172,10 @@ class WallpaperProvider {
     }
   }
 
-  async search(options: SearchOptions = {}): Promise<SearchResult> {
+  async search(
+    options: SearchOptions = {},
+    advancedFilters?: any
+  ): Promise<SearchResult> {
     const mergedOptions = { ...this.defaultOptions, ...options };
     const { query, category, sorting, order, page } = mergedOptions;
 
@@ -186,7 +189,8 @@ class WallpaperProvider {
         normalizedQuery,
         normalizedCategory,
         sorting,
-        page
+        page,
+        advancedFilters
       );
 
       if (cachedResult) {
@@ -209,7 +213,8 @@ class WallpaperProvider {
             sorting,
             order,
             page,
-            mergedOptions.purity
+            mergedOptions.purity,
+            advancedFilters
           );
         }
 
@@ -228,6 +233,7 @@ class WallpaperProvider {
         category: normalizedCategory,
         sorting,
         page,
+        advancedFilters,
       });
 
       const response = await this.fetchFromAPI(
@@ -236,7 +242,8 @@ class WallpaperProvider {
         sorting,
         order,
         page,
-        mergedOptions.purity
+        mergedOptions.purity,
+        advancedFilters
       );
 
       // Cache the result
@@ -247,7 +254,8 @@ class WallpaperProvider {
         page,
         response.wallpapers,
         response.totalCount,
-        response.hasNextPage
+        response.hasNextPage,
+        advancedFilters
       );
 
       return {
@@ -262,7 +270,8 @@ class WallpaperProvider {
         normalizedQuery,
         normalizedCategory,
         sorting,
-        page
+        page,
+        advancedFilters
       );
       if (staleCache) {
         console.log("Using stale cache as fallback");
@@ -279,7 +288,10 @@ class WallpaperProvider {
     }
   }
 
-  async loadMore(options: SearchOptions = {}): Promise<SearchResult> {
+  async loadMore(
+    options: SearchOptions = {},
+    advancedFilters?: any
+  ): Promise<SearchResult> {
     const mergedOptions = { ...this.defaultOptions, ...options };
     const { query, category, sorting, order } = mergedOptions;
     const nextPage = (options.page || 1) + 1;
@@ -293,7 +305,8 @@ class WallpaperProvider {
         normalizedQuery,
         normalizedCategory,
         sorting,
-        nextPage
+        nextPage,
+        advancedFilters
       );
 
       if (cachedResult) {
@@ -313,7 +326,8 @@ class WallpaperProvider {
         sorting,
         order,
         nextPage,
-        mergedOptions.purity
+        mergedOptions.purity,
+        advancedFilters
       );
 
       // Append to existing cache
@@ -324,7 +338,8 @@ class WallpaperProvider {
         nextPage,
         response.wallpapers,
         response.totalCount,
-        response.hasNextPage
+        response.hasNextPage,
+        advancedFilters
       );
 
       return {
@@ -343,7 +358,8 @@ class WallpaperProvider {
     sorting: string,
     order: string,
     page: number,
-    purity?: string
+    purity?: string,
+    advancedFilters?: any
   ): Promise<SearchResult> {
     const searchParams: WallhavenSearchParams = {
       page,
@@ -352,6 +368,7 @@ class WallpaperProvider {
       purity: purity || "100", // Default to SFW only
     };
 
+    // Basic query and category
     if (query) {
       searchParams.q = query;
     }
@@ -364,6 +381,28 @@ class WallpaperProvider {
         People: "001",
       };
       searchParams.categories = categoryMap[category] || "111";
+    }
+
+    // Apply advanced filters
+    if (advancedFilters) {
+      // Resolution filters
+      if (advancedFilters.minResolution) {
+        searchParams.atleast = advancedFilters.minResolution;
+      }
+
+      if (advancedFilters.exactResolutions?.length > 0) {
+        searchParams.resolutions = advancedFilters.exactResolutions.join(",");
+      }
+
+      // Aspect ratio filters
+      if (advancedFilters.aspectRatios?.length > 0) {
+        searchParams.ratios = advancedFilters.aspectRatios.join(",");
+      }
+
+      // Color filters
+      if (advancedFilters.colors?.length > 0) {
+        searchParams.colors = advancedFilters.colors.join(",");
+      }
     }
 
     const response: WallhavenSearchResponse =
@@ -388,7 +427,8 @@ class WallpaperProvider {
     sorting: string,
     order: string,
     page: number,
-    purity?: string
+    purity?: string,
+    advancedFilters?: any
   ): Promise<void> {
     try {
       console.log("Starting background refresh for cached data");
@@ -398,7 +438,8 @@ class WallpaperProvider {
         sorting,
         order,
         page,
-        purity
+        purity,
+        advancedFilters
       );
 
       // Update cache with fresh data
@@ -409,7 +450,8 @@ class WallpaperProvider {
         page,
         response.wallpapers,
         response.totalCount,
-        response.hasNextPage
+        response.hasNextPage,
+        advancedFilters
       );
 
       console.log("Background refresh completed");

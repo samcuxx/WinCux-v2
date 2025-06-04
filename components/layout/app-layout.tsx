@@ -24,7 +24,7 @@ export function AppLayout({ children, title }: AppLayoutProps) {
           <TopBar title={title} />
 
           {/* Content Area */}
-          <ScrollArea className="h-[calc(100vh-3rem)] custom-scrollbar bg-background/80">
+          <ScrollArea className="h-[calc(100vh-3rem)] custom-scrollbar bg-background">
           
             <div className="p-6">{children}</div>
           </ScrollArea>

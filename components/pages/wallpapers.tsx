@@ -9,8 +9,13 @@ import { WallpaperSourceStatus } from "@/components/ui/wallpaper-source-status";
 import { useSettings } from "@/lib/contexts/settings-context";
 import { WallpaperHeader } from "@/components/wallpapers/wallpaper-header";
 import { CacheStatsPanel } from "@/components/wallpapers/cache-stats-panel";
-import { SearchFilters } from "@/components/wallpapers/search-filters";
+
 import { CategoryFilters } from "@/components/wallpapers/category-filters";
+import {
+  AdvancedFilters,
+  AdvancedFilters as AdvancedFiltersType,
+} from "@/components/wallpapers/advanced-filters";
+import { FiltersSummary } from "@/components/wallpapers/filters-summary";
 import { ErrorState } from "@/components/wallpapers/error-state";
 import { ResultsCount } from "@/components/wallpapers/results-count";
 import { WallpaperGrid } from "@/components/wallpapers/wallpaper-grid";
@@ -19,7 +24,9 @@ import { LoadingState } from "@/components/wallpapers/loading-state";
 import { EmptyState } from "@/components/wallpapers/empty-state";
 import { WallpaperSkeleton } from "@/components/wallpapers/wallpaper-skeleton";
 import { Button } from "@/components/ui/button";
-import { Loader2, RefreshCw } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Loader2, RefreshCw, Search, ChevronDown } from "lucide-react";
+import { ColorFilters } from "@/components/wallpapers/color-filters";
 import {
   showTopBarNotification,
   updateTopBarNotification,
@@ -44,6 +51,12 @@ export function WallpapersPage() {
     new Set()
   );
   const [showCacheStats, setShowCacheStats] = useState(false);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [advancedFilters, setAdvancedFilters] = useState<AdvancedFiltersType>({
+    exactResolutions: [],
+    aspectRatios: [],
+  });
 
   // Use the wallpaper hook with search options
   const {
@@ -80,23 +93,39 @@ export function WallpapersPage() {
 
   // Handle search
   const handleSearch = async () => {
-    await search({
-      query: searchQuery || undefined,
-      category: selectedCategory,
-      sorting: sortBy,
-      order: "desc",
-    });
+    const combinedFilters = {
+      ...advancedFilters,
+      colors: selectedColors,
+    };
+
+    await search(
+      {
+        query: searchQuery || undefined,
+        category: selectedCategory,
+        sorting: sortBy,
+        order: "desc",
+      },
+      combinedFilters
+    );
   };
 
   // Handle category change
   const handleCategoryChange = async (category: string) => {
     setSelectedCategory(category);
-    await search({
-      query: searchQuery || undefined,
-      category,
-      sorting: sortBy,
-      order: "desc",
-    });
+    const combinedFilters = {
+      ...advancedFilters,
+      colors: selectedColors,
+    };
+
+    await search(
+      {
+        query: searchQuery || undefined,
+        category,
+        sorting: sortBy,
+        order: "desc",
+      },
+      combinedFilters
+    );
   };
 
   // Handle sorting change
@@ -109,12 +138,20 @@ export function WallpapersPage() {
       | "random"
       | "relevance";
     setSortBy(typedSorting);
-    await search({
-      query: searchQuery || undefined,
-      category: selectedCategory,
-      sorting: typedSorting,
-      order: "desc",
-    });
+    const combinedFilters = {
+      ...advancedFilters,
+      colors: selectedColors,
+    };
+
+    await search(
+      {
+        query: searchQuery || undefined,
+        category: selectedCategory,
+        sorting: typedSorting,
+        order: "desc",
+      },
+      combinedFilters
+    );
   };
 
   const handleWallpaperClick = (wallpaper: LocalWallpaper) => {
@@ -306,8 +343,108 @@ export function WallpapersPage() {
     handleSearch();
   };
 
+  // Advanced filters handlers
+  const handleAdvancedFiltersChange = (filters: AdvancedFiltersType) => {
+    setAdvancedFilters(filters);
+  };
+
+  const handleApplyAdvancedFilters = async () => {
+    await handleSearch();
+  };
+
+  const handleResetAdvancedFilters = () => {
+    setAdvancedFilters({
+      exactResolutions: [],
+      aspectRatios: [],
+    });
+  };
+
+  // Auto-trigger search when advanced filters or colors change
+  React.useEffect(() => {
+    const hasAdvancedFilters =
+      advancedFilters.exactResolutions.length > 0 ||
+      advancedFilters.aspectRatios.length > 0 ||
+      advancedFilters.minResolution;
+
+    const hasColorFilters = selectedColors.length > 0;
+
+    // Trigger search when filters are applied or removed (debounced)
+    if (hasAdvancedFilters || hasColorFilters) {
+      const timeoutId = setTimeout(() => {
+        handleSearch();
+      }, 300); // Shorter debounce for better responsiveness
+
+      return () => clearTimeout(timeoutId);
+    } else {
+      // When no filters are active, also trigger search to reset to default
+      const timeoutId = setTimeout(() => {
+        handleSearch();
+      }, 300);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [advancedFilters, selectedColors]); // Watch both advanced filters and colors
+
+  // Handle individual filter clearing
+  const handleClearFilter = async (filterType: string, value?: string) => {
+    switch (filterType) {
+      case "search":
+        setSearchQuery("");
+        break;
+      case "category":
+        setSelectedCategory("All");
+        break;
+      case "sort":
+        setSortBy("date_added");
+        break;
+      case "minResolution":
+        setAdvancedFilters((prev) => ({ ...prev, minResolution: undefined }));
+        break;
+      case "exactResolutions":
+        if (value) {
+          setAdvancedFilters((prev) => ({
+            ...prev,
+            exactResolutions: prev.exactResolutions.filter((r) => r !== value),
+          }));
+        }
+        break;
+      case "aspectRatios":
+        if (value) {
+          setAdvancedFilters((prev) => ({
+            ...prev,
+            aspectRatios: prev.aspectRatios.filter((r) => r !== value),
+          }));
+        }
+        break;
+
+      case "colors":
+        if (value) {
+          setSelectedColors((prev) => prev.filter((c) => c !== value));
+        }
+        break;
+    }
+
+    // Automatically trigger search after clearing filter
+    setTimeout(() => handleSearch(), 100);
+  };
+
+  // Handle clear all filters
+  const handleClearAllFilters = async () => {
+    setSearchQuery("");
+    setSelectedCategory("All");
+    setSortBy("date_added");
+    setSelectedColors([]);
+    setAdvancedFilters({
+      exactResolutions: [],
+      aspectRatios: [],
+    });
+
+    // Automatically trigger search after clearing all filters
+    setTimeout(() => handleSearch(), 100);
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
       {/* Infinite scroll loading indicator at top */}
       {isLoadingMore && (
         <div className="fixed top-0 left-0 right-0 z-40 bg-gradient-to-r from-blue-500 to-purple-500 h-1">
@@ -336,24 +473,91 @@ export function WallpapersPage() {
         onClearCache={handleClearCache}
       />
 
-      {/* Search and Filters */}
-      <SearchFilters
-        searchQuery={searchQuery}
-        sortBy={sortBy}
-        isLoading={isLoading}
-        sortingOptions={sortingOptions}
-        onSearchQueryChange={setSearchQuery}
-        onSearch={handleSearch}
-        onSortChange={handleSortChange}
-        onKeyPress={(e) => e.key === "Enter" && handleSearch()}
-      />
+      {/* Basic Filters (Search, Sort) */}
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+          <Input
+            placeholder="Search wallpapers, tags, or authors..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyPress={(e: React.KeyboardEvent) =>
+              e.key === "Enter" && handleSearch()
+            }
+            className="pl-10"
+          />
+        </div>
+        <div className="flex items-center space-x-2">
+          <Button
+            onClick={handleSearch}
+            disabled={isLoading}
+            title="Search wallpapers"
+          >
+            {isLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Search className="w-4 h-4" />
+            )}
+          </Button>
+          <div className="relative">
+            <select
+              value={sortBy}
+              onChange={(e) => handleSortChange(e.target.value)}
+              className="appearance-none bg-background border border-input rounded-md px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              title="Sort wallpapers by"
+              disabled={isLoading}
+            >
+              {sortingOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+          </div>
+        </div>
+      </div>
+      {/* Categories, Colors and Advanced Filters */}
+      <div className="flex items-center gap-4">
+        <div className="shrink-0">
+          <CategoryFilters
+            categories={categories}
+            selectedCategory={selectedCategory}
+            isLoading={isLoading}
+            onCategoryChange={handleCategoryChange}
+          />
+        </div>
 
-      {/* Categories */}
-      <CategoryFilters
-        categories={categories}
+        <div className="shrink-0">
+          <ColorFilters
+            selectedColors={selectedColors}
+            onColorChange={setSelectedColors}
+            isLoading={isLoading}
+          />
+        </div>
+
+        {/* <div className="shrink-0">
+          <AdvancedFilters
+            isVisible={showAdvancedFilters}
+            filters={advancedFilters}
+            isLoading={isLoading}
+            onFiltersChange={handleAdvancedFiltersChange}
+            onToggle={() => setShowAdvancedFilters(!showAdvancedFilters)}
+            onApply={handleApplyAdvancedFilters}
+            onReset={handleResetAdvancedFilters}
+          />
+        </div> */}
+      </div>
+
+      {/* Active Filters Summary */}
+      <FiltersSummary
+        searchQuery={searchQuery}
         selectedCategory={selectedCategory}
-        isLoading={isLoading}
-        onCategoryChange={handleCategoryChange}
+        sortBy={sortBy}
+        selectedColors={selectedColors}
+        advancedFilters={advancedFilters}
+        onClearFilter={handleClearFilter}
+        onClearAll={handleClearAllFilters}
       />
 
       {/* Error State */}

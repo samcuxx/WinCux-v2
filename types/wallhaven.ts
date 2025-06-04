@@ -121,6 +121,26 @@ export interface WallhavenSearchParams {
   apikey?: string;
 }
 
+// Extended search options interface for frontend filters
+export interface ExtendedSearchOptions {
+  q?: string;
+  categories?: string;
+  purity?: string;
+  sorting?:
+    | "date_added"
+    | "relevance"
+    | "random"
+    | "views"
+    | "favorites"
+    | "toplist";
+  order?: "desc" | "asc";
+  atleast?: string;
+  resolutions?: string[];
+  ratios?: string[];
+  colors?: string[];
+  page?: number;
+}
+
 // Local wallpaper type for compatibility with existing components
 export interface LocalWallpaper {
   id: string;
@@ -174,4 +194,3 @@ export interface RateLimit {
   reset: number;
   limit: number;
 }
- 

@@ -220,7 +220,7 @@ export function TopBar({ title }: TopBarProps) {
 
   return (
     <div
-      className="flex items-center justify-between h-12 px-6 bg-background/80"
+      className="flex items-center justify-between h-12 px-6 bg-background"
       style={{ WebkitAppRegion: "drag" } as any}
     >
       {/* Left side - App info */}
@@ -235,11 +235,19 @@ export function TopBar({ title }: TopBarProps) {
               {getNotificationIcon(notification.type)}
             </div>
             <div className="flex items-center">
-              <span className={`text-sm font-medium ${getNotificationGradient(notification.type)}`}>
+              <span
+                className={`text-sm font-medium ${getNotificationGradient(
+                  notification.type
+                )}`}
+              >
                 {notification.message}
               </span>
               {notification.subMessage && (
-                <span className={`text-xs ml-2 ${getNotificationGradient(notification.type)}`}>
+                <span
+                  className={`text-xs ml-2 ${getNotificationGradient(
+                    notification.type
+                  )}`}
+                >
                   {notification.subMessage}
                 </span>
               )}

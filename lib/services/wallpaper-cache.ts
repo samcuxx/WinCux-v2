@@ -9,6 +9,7 @@ interface CacheEntry {
   sorting: string;
   page: number;
   hasNextPage: boolean;
+  advancedFilters?: any;
 }
 
 interface CacheMetadata {
@@ -82,13 +83,15 @@ class WallpaperCacheService {
     query: string,
     category: string,
     sorting: string,
-    page: number
+    page: number,
+    advancedFilters?: any
   ): string {
     const normalized = {
       query: query.toLowerCase().trim(),
       category,
       sorting,
       page,
+      advancedFilters: advancedFilters || null,
     };
     return `${this.CACHE_PREFIX}${btoa(JSON.stringify(normalized))}`;
   }
@@ -151,7 +154,8 @@ class WallpaperCacheService {
     page: number,
     data: LocalWallpaper[],
     totalCount: number,
-    hasNextPage: boolean
+    hasNextPage: boolean,
+    advancedFilters?: any
   ): void {
     try {
       if (typeof window === "undefined") {
@@ -160,7 +164,13 @@ class WallpaperCacheService {
 
       this.cleanupOldEntries();
 
-      const cacheKey = this.generateCacheKey(query, category, sorting, page);
+      const cacheKey = this.generateCacheKey(
+        query,
+        category,
+        sorting,
+        page,
+        advancedFilters
+      );
       const entry: CacheEntry = {
         data: data.slice(0, this.MAX_WALLPAPERS_PER_CACHE), // Limit data size
         timestamp: Date.now(),
@@ -170,6 +180,7 @@ class WallpaperCacheService {
         sorting,
         page,
         hasNextPage,
+        advancedFilters,
       };
 
       localStorage.setItem(cacheKey, JSON.stringify(entry));
@@ -195,7 +206,8 @@ class WallpaperCacheService {
             query,
             category,
             sorting,
-            page
+            page,
+            advancedFilters
           );
           const entry: CacheEntry = {
             data: data.slice(0, this.MAX_WALLPAPERS_PER_CACHE),
@@ -206,6 +218,7 @@ class WallpaperCacheService {
             sorting,
             page,
             hasNextPage,
+            advancedFilters,
           };
           localStorage.setItem(cacheKey, JSON.stringify(entry));
         } catch (retryError) {
@@ -219,14 +232,21 @@ class WallpaperCacheService {
     query: string,
     category: string,
     sorting: string,
-    page: number
+    page: number,
+    advancedFilters?: any
   ): CacheEntry | null {
     try {
       if (typeof window === "undefined") {
         return null;
       }
 
-      const cacheKey = this.generateCacheKey(query, category, sorting, page);
+      const cacheKey = this.generateCacheKey(
+        query,
+        category,
+        sorting,
+        page,
+        advancedFilters
+      );
       const cached = localStorage.getItem(cacheKey);
 
       if (!cached) return null;
@@ -380,11 +400,18 @@ class WallpaperCacheService {
     page: number,
     newWallpapers: LocalWallpaper[],
     totalCount: number,
-    hasNextPage: boolean
+    hasNextPage: boolean,
+    advancedFilters?: any
   ): void {
     try {
       // Get the first page cache
-      const firstPageEntry = this.get(query, category, sorting, 1);
+      const firstPageEntry = this.get(
+        query,
+        category,
+        sorting,
+        1,
+        advancedFilters
+      );
 
       if (firstPageEntry && page > 1) {
         // Create a set of existing wallpaper IDs to prevent duplicates
@@ -408,7 +435,8 @@ class WallpaperCacheService {
             1,
             combinedData,
             totalCount,
-            hasNextPage
+            hasNextPage,
+            advancedFilters
           );
         }
       } else {
@@ -420,7 +448,8 @@ class WallpaperCacheService {
           page,
           newWallpapers,
           totalCount,
-          hasNextPage
+          hasNextPage,
+          advancedFilters
         );
       }
     } catch (error) {
