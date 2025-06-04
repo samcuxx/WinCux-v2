@@ -13,7 +13,6 @@ interface AppLayoutProps {
 export function AppLayout({ children, title }: AppLayoutProps) {
   return (
     <div className="">
-     
       <div className="flex h-screen relative z-10">
         {/* Sidebar */}
         <Sidebar />
@@ -25,7 +24,6 @@ export function AppLayout({ children, title }: AppLayoutProps) {
 
           {/* Content Area */}
           <ScrollArea className="h-[calc(100vh-3rem)] custom-scrollbar bg-background">
-          
             <div className="p-6">{children}</div>
           </ScrollArea>
         </div>

@@ -53,7 +53,7 @@ export function Sidebar() {
   };
 
   return (
-    <div className="w-64  flex flex-col">
+    <div className="w-64  flex flex-col ">
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-2">
         {navigation.map((item) => {
