@@ -2,8 +2,14 @@ appId: "app.samcux.desktoppro"
 productName: "Desktop Pro"
 copyright: "Copyright (c) 2025 SamCux"
 win:
-  target: ["dir", "portable", "zip"]
+  target: ["dir", "portable", "zip", "nsis"]
   icon: "resources/icon.ico"
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: "Desktop Pro"
 linux:
   target: ["dir", "appimage", "zip"]
   icon: "resources/icon.png"
