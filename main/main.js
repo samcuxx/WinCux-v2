@@ -23,7 +23,7 @@ const createWindow = () => {
     frame: false,
     titleBarStyle: "hidden",
     // backgroundColor: "#f8fafc",
-    backgroundMaterial: "mica",
+    backgroundMaterial: "acrylic",
     icon: path.join(__dirname, "../resources/icon.png"),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
