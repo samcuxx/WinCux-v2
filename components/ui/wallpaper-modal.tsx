@@ -25,6 +25,7 @@ export function WallpaperModal({
   const [isSettingWallpaper, setIsSettingWallpaper] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
   const [localImagePath, setLocalImagePath] = useState<string | null>(null);
+  const [isLoadingFull, setIsLoadingFull] = useState(false);
 
   const getFilename = (id: string) => {
     return `wallpaper_${id}.jpg`;
@@ -167,6 +168,36 @@ export function WallpaperModal({
   // Use local image if available, otherwise use online version
   const displayImageSrc = localImagePath || wallpaper.fullRes;
   const isUsingLocalImage = !!localImagePath;
+
+  // Update the loadLocalWallpaper function to use cached thumbnails
+  const loadLocalWallpaper = async (filename: string) => {
+    if (!window.electronAPI) return null;
+    
+    try {
+      setIsLoadingFull(true);
+      
+      // First try to get the full resolution image
+      const result = await window.electronAPI.getLocalWallpaper(filename);
+      
+      if (result.success && result.dataUrl) {
+        return result.dataUrl;
+      }
+      
+      // If full resolution fails, try to get the thumbnail as fallback
+      const thumbnailResult = await window.electronAPI.getLocalWallpaperThumbnail(filename);
+      
+      if (thumbnailResult.success && thumbnailResult.thumbnailUrl) {
+        return thumbnailResult.thumbnailUrl;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error("Error loading local wallpaper:", error);
+      return null;
+    } finally {
+      setIsLoadingFull(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">

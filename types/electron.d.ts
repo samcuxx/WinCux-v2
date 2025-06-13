@@ -43,6 +43,8 @@ export interface ElectronAPI {
     path?: string;
     size?: number;
     error?: string;
+    fromCache?: boolean;
+    fallback?: boolean;
   }>;
   deleteLocalWallpaper: (filename: string) => Promise<{
     success: boolean;
@@ -135,6 +137,15 @@ export interface ElectronAPI {
     chrome: string;
     electron: string;
   };
+
+  // Verify and regenerate thumbnails for all wallpapers
+  verifyWallpaperThumbnails: () => Promise<{
+    success: boolean;
+    processed: number;
+    generated: number;
+    cachePath?: string;
+    error?: string;
+  }>;
 }
 
 declare global {

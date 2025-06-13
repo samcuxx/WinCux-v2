@@ -10,7 +10,6 @@ import React, {
 } from "react";
 import { FixedSizeGrid as Grid } from "react-window";
 import { WallpaperModal } from "@/components/ui/wallpaper-modal";
-import { LocalWallpaper } from "@/types/wallhaven";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -34,151 +33,13 @@ import {
   hideTopBarNotification,
 } from "@/components/layout/top-bar";
 import Image from "next/image";
-
-// Enhanced interface for local wallpapers with additional properties
-interface ExtendedLocalWallpaper extends LocalWallpaper {
-  filename: string;
-  path: string;
-  file_size: number;
-}
-
-// Thumbnail cache to prevent repeated IPC calls
-const thumbnailCache = new Map<string, string>();
-const failedThumbnails = new Set<string>();
-
-// Optimized thumbnail component with lazy loading and caching
-const OptimizedThumbnail = memo<{
-  wallpaper: ExtendedLocalWallpaper;
-  className?: string;
-  alt: string;
-  onClick?: () => void;
-  isVisible?: boolean;
-}>(({ wallpaper, className, alt, onClick, isVisible = true }) => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(false);
-  const [thumbnailSrc, setThumbnailSrc] = useState<string | null>(null);
-  const [isIntersecting, setIsIntersecting] = useState(false);
-  const imgRef = useRef<HTMLImageElement>(null);
-  const observerRef = useRef<IntersectionObserver | null>(null);
-
-  // Intersection Observer for lazy loading
-  useEffect(() => {
-    if (!isVisible) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsIntersecting(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.1, rootMargin: "50px" }
-    );
-
-    if (imgRef.current) {
-      observer.observe(imgRef.current);
-    }
-
-    observerRef.current = observer;
-
-    return () => {
-      observer.disconnect();
-    };
-  }, [isVisible]);
-
-  // Load thumbnail only when intersecting
-  useEffect(() => {
-    if (!isIntersecting || !window.electronAPI) {
-      if (!window.electronAPI) {
-        setError(true);
-        setIsLoading(false);
-      }
-      return;
-    }
-
-    const loadThumbnail = async () => {
-      // Check cache first
-      const cacheKey = wallpaper.filename;
-
-      if (failedThumbnails.has(cacheKey)) {
-        setError(true);
-        setIsLoading(false);
-        return;
-      }
-
-      if (thumbnailCache.has(cacheKey)) {
-        setThumbnailSrc(thumbnailCache.get(cacheKey)!);
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        console.log(`Loading thumbnail for: ${wallpaper.filename}`);
-        const result = await window.electronAPI.getLocalWallpaperThumbnail(
-          wallpaper.filename
-        );
-
-        if (result.success && result.thumbnailUrl) {
-          console.log(
-            `Thumbnail loaded successfully for: ${wallpaper.filename}`
-          );
-          thumbnailCache.set(cacheKey, result.thumbnailUrl);
-          setThumbnailSrc(result.thumbnailUrl);
-        } else {
-          console.warn(
-            `Failed to load thumbnail for: ${wallpaper.filename}`,
-            result.error
-          );
-          failedThumbnails.add(cacheKey);
-          setError(true);
-        }
-      } catch (err) {
-        console.error("Failed to load thumbnail:", err);
-        failedThumbnails.add(cacheKey);
-        setError(true);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadThumbnail();
-  }, [isIntersecting, wallpaper.filename]);
-
-  return (
-    <div ref={imgRef} className={cn("relative overflow-hidden", className)}>
-      {isLoading && (
-        <div className="absolute inset-0 bg-gray-200 dark:bg-gray-700 animate-pulse flex items-center justify-center">
-          <ImageIcon className="w-8 h-8 text-gray-400" />
-        </div>
-      )}
-
-      {error || !thumbnailSrc ? (
-        <div className="absolute inset-0 bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-          <ImageIcon className="w-8 h-8 text-gray-400" />
-        </div>
-      ) : (
-        <Image
-          src={thumbnailSrc}
-          alt={alt}
-          width={319}
-          height={180}
-          className={cn("w-full h-full object-cover", className)}
-          onClick={onClick}
-          onLoad={() => setIsLoading(false)}
-          onError={() => {
-            setError(true);
-            setIsLoading(false);
-            failedThumbnails.add(wallpaper.filename);
-          }}
-          loading="lazy"
-          style={{ maxWidth: "100%", maxHeight: "100%" }}
-        />
-      )}
-    </div>
-  );
-});
-
-OptimizedThumbnail.displayName = "OptimizedThumbnail";
+import {
+  OptimizedThumbnail,
+  thumbnailCache,
+  failedThumbnails,
+} from "@/components/ui/optimized-thumbnail";
+import { ExtendedLocalWallpaper } from "@/types/wallpaper";
+import { LocalWallpaper } from "@/types/wallhaven";
 
 // Memoized wallpaper card component
 const WallpaperCard = memo<{
@@ -316,9 +177,32 @@ export function DownloadsPage() {
   const [sortBy, setSortBy] = useState<"name" | "date" | "size">("date");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isCacheVerifying, setIsCacheVerifying] = useState(false);
+  const [cacheStatus, setCacheStatus] = useState<{
+    processed: number;
+    generated: number;
+  } | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+
+  // Debug mode for development
+  const [showDebugInfo, setShowDebugInfo] = useState(false);
+
+  // Toggle debug mode
+  const toggleDebugMode = useCallback(() => {
+    setShowDebugInfo((prev) => !prev);
+  }, []);
+
+  // Debug statistics
+  const debugStats = useMemo(() => {
+    return {
+      cacheSize: thumbnailCache.size,
+      cacheMaxSize: thumbnailCache.max,
+      failedThumbnails: failedThumbnails.size,
+      cacheStatus,
+    };
+  }, [thumbnailCache.size, failedThumbnails.size, cacheStatus]);
 
   // Debounced search function
   const debouncedSearch = useMemo(() => {
@@ -377,70 +261,110 @@ export function DownloadsPage() {
     }
   }, []);
 
-  // Optimized wallpaper loading with caching
-  const loadLocalWallpapers = useCallback(async (isRefresh = false) => {
+  // Verify thumbnail cache
+  const verifyThumbnailCache = useCallback(async () => {
     if (!window.electronAPI) {
-      setError("Electron API not available");
-      setIsLoading(false);
+      console.error("Electron API not available");
       return;
     }
 
     try {
-      if (isRefresh) {
-        setIsRefreshing(true);
-      } else {
-        setIsLoading(true);
-      }
-      setError(null);
-
-      const result = await window.electronAPI.listLocalWallpapers();
+      setIsCacheVerifying(true);
+      const result = await window.electronAPI.verifyWallpaperThumbnails();
 
       if (result.success) {
-        console.log("Loaded wallpapers:", result.wallpapers.length);
-        // Ensure data structure compatibility
-        const processedWallpapers = result.wallpapers.map((wallpaper: any) => ({
-          ...wallpaper,
-          // Ensure all required ExtendedLocalWallpaper properties exist
-          filename: wallpaper.filename || wallpaper.title || "unknown",
-          path: wallpaper.path || wallpaper.url || wallpaper.fullRes,
-          file_size: wallpaper.file_size || 0,
-          // Ensure LocalWallpaper interface compatibility
-          title: wallpaper.title || wallpaper.filename || "Untitled",
-          description:
-            wallpaper.description || `Local wallpaper: ${wallpaper.filename}`,
-          category: wallpaper.category || "general",
-          resolution: wallpaper.resolution || "Unknown",
-          size: wallpaper.size || "Unknown",
-          downloads: wallpaper.downloads || 1,
-          rating: wallpaper.rating || 5.0,
-          tags: Array.isArray(wallpaper.tags) ? wallpaper.tags : ["local"],
-          author: wallpaper.author || "Local",
-          dateAdded:
-            wallpaper.dateAdded ||
-            wallpaper.created_at ||
-            new Date().toISOString(),
-          colors: Array.isArray(wallpaper.colors)
-            ? wallpaper.colors
-            : ["#000000"],
-          thumbnail: wallpaper.thumbnail || wallpaper.path || wallpaper.url,
-          preview: wallpaper.preview || wallpaper.path || wallpaper.url,
-          fullRes: wallpaper.fullRes || wallpaper.path || wallpaper.url,
-          source: wallpaper.source || "local",
-          sourceId: wallpaper.sourceId || wallpaper.id,
-        }));
-
-        setLocalWallpapers(processedWallpapers as ExtendedLocalWallpaper[]);
+        console.log(
+          `Cache verification complete: ${result.processed} processed, ${result.generated} generated`
+        );
+        setCacheStatus({
+          processed: result.processed,
+          generated: result.generated,
+        });
       } else {
-        setError(result.error || "Failed to load local wallpapers");
+        console.error("Cache verification failed:", result.error);
       }
-    } catch (err) {
-      console.error("Error loading wallpapers:", err);
-      setError(err instanceof Error ? err.message : "Unknown error occurred");
+    } catch (error) {
+      console.error("Error verifying thumbnail cache:", error);
     } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
+      setIsCacheVerifying(false);
     }
   }, []);
+
+  // Optimized wallpaper loading with caching
+  const loadLocalWallpapers = useCallback(
+    async (isRefresh = false) => {
+      if (!window.electronAPI) {
+        setError("Electron API not available");
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        if (isRefresh) {
+          setIsRefreshing(true);
+        } else {
+          setIsLoading(true);
+        }
+        setError(null);
+
+        // Verify thumbnail cache first to ensure optimized loading
+        if (!cacheStatus) {
+          await verifyThumbnailCache();
+        }
+
+        const result = await window.electronAPI.listLocalWallpapers();
+
+        if (result.success) {
+          console.log("Loaded wallpapers:", result.wallpapers.length);
+          // Ensure data structure compatibility
+          const processedWallpapers = result.wallpapers.map(
+            (wallpaper: any) => ({
+              ...wallpaper,
+              // Ensure all required ExtendedLocalWallpaper properties exist
+              filename: wallpaper.filename || wallpaper.title || "unknown",
+              path: wallpaper.path || wallpaper.url || wallpaper.fullRes,
+              file_size: wallpaper.file_size || 0,
+              // Ensure LocalWallpaper interface compatibility
+              title: wallpaper.title || wallpaper.filename || "Untitled",
+              description:
+                wallpaper.description ||
+                `Local wallpaper: ${wallpaper.filename}`,
+              category: wallpaper.category || "general",
+              resolution: wallpaper.resolution || "Unknown",
+              size: wallpaper.size || "Unknown",
+              downloads: wallpaper.downloads || 1,
+              rating: wallpaper.rating || 5.0,
+              tags: Array.isArray(wallpaper.tags) ? wallpaper.tags : ["local"],
+              author: wallpaper.author || "Local",
+              dateAdded:
+                wallpaper.dateAdded ||
+                wallpaper.created_at ||
+                new Date().toISOString(),
+              colors: Array.isArray(wallpaper.colors)
+                ? wallpaper.colors
+                : ["#000000"],
+              thumbnail: wallpaper.thumbnail || wallpaper.path || wallpaper.url,
+              preview: wallpaper.preview || wallpaper.path || wallpaper.url,
+              fullRes: wallpaper.fullRes || wallpaper.path || wallpaper.url,
+              source: wallpaper.source || "local",
+              sourceId: wallpaper.sourceId || wallpaper.id,
+            })
+          );
+
+          setLocalWallpapers(processedWallpapers as ExtendedLocalWallpaper[]);
+        } else {
+          setError(result.error || "Failed to load local wallpapers");
+        }
+      } catch (err) {
+        console.error("Error loading wallpapers:", err);
+        setError(err instanceof Error ? err.message : "Unknown error occurred");
+      } finally {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
+    },
+    [cacheStatus, verifyThumbnailCache]
+  );
 
   // Memoized filtered and sorted wallpapers
   const filteredWallpapers = useMemo(() => {
@@ -520,6 +444,12 @@ export function DownloadsPage() {
 
   useEffect(() => {
     loadLocalWallpapers();
+
+    // Clear caches when component unmounts
+    return () => {
+      thumbnailCache.clear();
+      failedThumbnails.clear();
+    };
   }, [loadLocalWallpapers]);
 
   useEffect(() => {
@@ -665,6 +595,7 @@ export function DownloadsPage() {
     // Clear caches
     thumbnailCache.clear();
     failedThumbnails.clear();
+    setCacheStatus(null); // Reset cache status to trigger verification
     loadLocalWallpapers(true);
   }, [loadLocalWallpapers]);
 
@@ -740,8 +671,31 @@ export function DownloadsPage() {
               Downloads
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-2">
-              Loading your downloaded wallpapers...
+              {isCacheVerifying
+                ? "Optimizing thumbnails for better performance..."
+                : "Loading your downloaded wallpapers..."}
             </p>
+            {isCacheVerifying && cacheStatus && (
+              <div className="mt-2">
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                  <div
+                    className="bg-purple-600 h-2.5 rounded-full transition-all duration-300"
+                    style={{
+                      width: `${Math.min(
+                        100,
+                        (cacheStatus.generated /
+                          Math.max(1, cacheStatus.processed)) *
+                          100
+                      )}%`,
+                    }}
+                  ></div>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Generating thumbnails: {cacheStatus.generated} of{" "}
+                  {cacheStatus.processed} processed
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -946,10 +900,38 @@ export function DownloadsPage() {
 
       {/* Debug Info */}
       {process.env.NODE_ENV === "development" && (
-        <div className="text-xs text-gray-500 mb-2">
-          Debug: Container: {containerSize.width}x{containerSize.height},
-          Wallpapers: {filteredWallpapers.length}, Grid:{" "}
-          {gridConfig.columnCount}x{gridConfig.rowCount}
+        <div className="mb-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleDebugMode}
+            className="text-xs"
+          >
+            {showDebugInfo ? "Hide Debug Info" : "Show Debug Info"}
+          </Button>
+
+          {showDebugInfo && (
+            <div className="mt-2 p-3 bg-gray-100 dark:bg-gray-800 rounded-md text-xs font-mono">
+              <div>
+                Cache Size: {debugStats.cacheSize} / {debugStats.cacheMaxSize}
+              </div>
+              <div>Failed Thumbnails: {debugStats.failedThumbnails}</div>
+              <div>
+                Cache Verification:{" "}
+                {cacheStatus
+                  ? `${cacheStatus.processed} processed, ${cacheStatus.generated} generated`
+                  : "Not run"}
+              </div>
+              <div>
+                Container: {containerSize.width}x{containerSize.height}
+              </div>
+              <div>
+                Grid: {gridConfig.columnCount}x{gridConfig.rowCount}
+              </div>
+              <div>Total Wallpapers: {localWallpapers.length}</div>
+              <div>Filtered Wallpapers: {filteredWallpapers.length}</div>
+            </div>
+          )}
         </div>
       )}
 

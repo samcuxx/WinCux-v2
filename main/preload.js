@@ -102,4 +102,19 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // Wallhaven API (from wallhavenAPI module)
   ...wallhavenAPI,
+
+  // Get local wallpaper
+  getLocalWallpaper: (filename) => {
+    return ipcRenderer.invoke('get-local-wallpaper', { filename });
+  },
+  
+  // Get local wallpaper thumbnail
+  getLocalWallpaperThumbnail: (filename) => {
+    return ipcRenderer.invoke('get-local-wallpaper-thumbnail', { filename });
+  },
+  
+  // Verify and regenerate thumbnails for all wallpapers
+  verifyWallpaperThumbnails: () => {
+    return ipcRenderer.invoke('verify-wallpaper-thumbnails');
+  },
 });

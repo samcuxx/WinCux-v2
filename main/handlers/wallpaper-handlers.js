@@ -4,8 +4,100 @@ const https = require("https");
 const os = require("os");
 const path = require("path");
 const { exec } = require("child_process");
+const { createHash } = require("crypto");
+const sharp = require("sharp");
+
+// Constants for thumbnail generation
+const THUMBNAIL_WIDTH = 320;
+const THUMBNAIL_HEIGHT = 180;
+const THUMBNAIL_QUALITY = 80;
+
+// Cache management constants
+const CACHE_MAX_AGE = 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
 
 function setupWallpaperHandlers() {
+  // Ensure thumbnail cache directory exists
+  const ensureThumbnailCacheDir = () => {
+    const picturesPath = path.join(os.homedir(), "Pictures", "Wallpapers");
+    const cachePath = path.join(picturesPath, ".thumbnails");
+
+    if (!fs.existsSync(picturesPath)) {
+      fs.mkdirSync(picturesPath, { recursive: true });
+    }
+
+    if (!fs.existsSync(cachePath)) {
+      fs.mkdirSync(cachePath, { recursive: true });
+
+      // Set hidden attribute on Windows
+      if (process.platform === "win32") {
+        try {
+          const { execSync } = require("child_process");
+          execSync(`attrib +h "${cachePath}"`);
+          console.log("Set hidden attribute on thumbnails folder");
+        } catch (error) {
+          console.error("Failed to set hidden attribute:", error);
+        }
+      }
+    }
+
+    return cachePath;
+  };
+
+  // Generate a cache key for a wallpaper
+  const generateCacheKey = (filename) => {
+    return createHash("md5").update(filename).digest("hex");
+  };
+
+  // Generate thumbnail for a wallpaper
+  const generateThumbnail = async (filePath, cacheKey) => {
+    const cachePath = ensureThumbnailCacheDir();
+    const thumbnailPath = path.join(cachePath, `${cacheKey}.webp`);
+
+    try {
+      await sharp(filePath)
+        .resize(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT, {
+          fit: "cover",
+          position: "center",
+        })
+        .webp({ quality: THUMBNAIL_QUALITY })
+        .toFile(thumbnailPath);
+
+      return thumbnailPath;
+    } catch (error) {
+      console.error(`Error generating thumbnail for ${filePath}:`, error);
+      throw error;
+    }
+  };
+
+  // Clean up old thumbnails
+  const cleanupOldThumbnails = () => {
+    try {
+      const cachePath = ensureThumbnailCacheDir();
+      const now = Date.now();
+
+      const files = fs.readdirSync(cachePath);
+
+      files.forEach((file) => {
+        const filePath = path.join(cachePath, file);
+        const stats = fs.statSync(filePath);
+
+        // Delete thumbnails older than CACHE_MAX_AGE
+        if (now - stats.mtimeMs > CACHE_MAX_AGE) {
+          fs.unlinkSync(filePath);
+          console.log(`Deleted old thumbnail: ${filePath}`);
+        }
+      });
+    } catch (error) {
+      console.error("Error cleaning up old thumbnails:", error);
+    }
+  };
+
+  // Run cleanup on startup
+  cleanupOldThumbnails();
+
+  // Schedule periodic cleanup (every 24 hours)
+  setInterval(cleanupOldThumbnails, 24 * 60 * 60 * 1000);
+
   // Download wallpaper functionality
   ipcMain.handle("download-wallpaper", async (event, { url, filename }) => {
     try {
@@ -146,49 +238,154 @@ function setupWallpaperHandlers() {
           return { success: false, error: "File not found" };
         }
 
-        // Read the file as binary data
-        const fileBuffer = fs.readFileSync(filePath);
+        // Generate cache key
+        const cacheKey = generateCacheKey(filename);
+        const cachePath = ensureThumbnailCacheDir();
+        const thumbnailPath = path.join(cachePath, `${cacheKey}.webp`);
 
-        // Determine the MIME type based on file extension
-        const ext = filename.toLowerCase().split(".").pop();
-        let mimeType = "image/jpeg"; // default
+        // Check if thumbnail already exists in cache
+        if (fs.existsSync(thumbnailPath)) {
+          // Update access time to prevent premature deletion
+          fs.utimesSync(thumbnailPath, new Date(), new Date());
 
-        switch (ext) {
-          case "png":
-            mimeType = "image/png";
-            break;
-          case "webp":
-            mimeType = "image/webp";
-            break;
-          case "gif":
-            mimeType = "image/gif";
-            break;
-          case "bmp":
-            mimeType = "image/bmp";
-            break;
-          case "jpg":
-          case "jpeg":
-          default:
-            mimeType = "image/jpeg";
-            break;
+          // Read the thumbnail file
+          const thumbnailBuffer = fs.readFileSync(thumbnailPath);
+          const thumbnailBase64 = thumbnailBuffer.toString("base64");
+          const thumbnailUrl = `data:image/webp;base64,${thumbnailBase64}`;
+
+          return {
+            success: true,
+            thumbnailUrl,
+            path: filePath,
+            fromCache: true,
+          };
         }
 
-        // Convert to base64 data URL
-        const base64Data = fileBuffer.toString("base64");
-        const dataUrl = `data:${mimeType};base64,${base64Data}`;
+        // Generate thumbnail if not in cache
+        try {
+          await generateThumbnail(filePath, cacheKey);
 
-        return {
-          success: true,
-          thumbnailUrl: dataUrl,
-          path: filePath,
-          size: fileBuffer.length,
-        };
+          // Read the newly generated thumbnail
+          const thumbnailBuffer = fs.readFileSync(thumbnailPath);
+          const thumbnailBase64 = thumbnailBuffer.toString("base64");
+          const thumbnailUrl = `data:image/webp;base64,${thumbnailBase64}`;
+
+          return {
+            success: true,
+            thumbnailUrl,
+            path: filePath,
+            fromCache: false,
+          };
+        } catch (error) {
+          console.error("Error generating thumbnail:", error);
+
+          // Fallback to full image if thumbnail generation fails
+          const fileBuffer = fs.readFileSync(filePath);
+          const ext = filename.toLowerCase().split(".").pop();
+          let mimeType = "image/jpeg"; // default
+
+          switch (ext) {
+            case "png":
+              mimeType = "image/png";
+              break;
+            case "webp":
+              mimeType = "image/webp";
+              break;
+            case "gif":
+              mimeType = "image/gif";
+              break;
+            case "bmp":
+              mimeType = "image/bmp";
+              break;
+            case "jpg":
+            case "jpeg":
+            default:
+              mimeType = "image/jpeg";
+              break;
+          }
+
+          const base64Data = fileBuffer.toString("base64");
+          const dataUrl = `data:${mimeType};base64,${base64Data}`;
+
+          return {
+            success: true,
+            thumbnailUrl: dataUrl,
+            path: filePath,
+            size: fileBuffer.length,
+            fromCache: false,
+            fallback: true,
+          };
+        }
       } catch (error) {
         console.error("Error creating thumbnail:", error);
         return { success: false, error: error.message };
       }
     }
   );
+
+  // Verify and regenerate thumbnails for all wallpapers
+  ipcMain.handle("verify-wallpaper-thumbnails", async () => {
+    try {
+      const picturesPath = path.join(os.homedir(), "Pictures", "Wallpapers");
+      const cachePath = ensureThumbnailCacheDir();
+
+      // Create Wallpapers folder if it doesn't exist
+      if (!fs.existsSync(picturesPath)) {
+        fs.mkdirSync(picturesPath, { recursive: true });
+        return { success: true, processed: 0, generated: 0 };
+      }
+
+      const files = fs.readdirSync(picturesPath);
+      const imageExtensions = [
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".bmp",
+        ".gif",
+        ".webp",
+      ];
+
+      let processed = 0;
+      let generated = 0;
+
+      for (const file of files) {
+        // Skip the thumbnails directory itself
+        if (file === ".thumbnails") continue;
+
+        const filePath = path.join(picturesPath, file);
+        const ext = path.extname(file).toLowerCase();
+
+        // Check if it's an image file
+        if (imageExtensions.includes(ext)) {
+          processed++;
+
+          // Generate cache key
+          const cacheKey = generateCacheKey(file);
+          const thumbnailPath = path.join(cachePath, `${cacheKey}.webp`);
+
+          // Generate thumbnail if it doesn't exist
+          if (!fs.existsSync(thumbnailPath)) {
+            try {
+              await generateThumbnail(filePath, cacheKey);
+              generated++;
+            } catch (error) {
+              console.error(`Error generating thumbnail for ${file}:`, error);
+            }
+          }
+        }
+      }
+
+      return {
+        success: true,
+        processed,
+        generated,
+        cachePath,
+      };
+    } catch (error) {
+      console.error("Error verifying thumbnails:", error);
+      return { success: false, error: error.message };
+    }
+  });
 
   // Delete local wallpaper
   ipcMain.handle("delete-local-wallpaper", async (event, { filename }) => {
@@ -203,6 +400,20 @@ function setupWallpaperHandlers() {
 
       // Delete the file
       fs.unlinkSync(filePath);
+
+      // Also delete the thumbnail if it exists
+      try {
+        const cacheKey = generateCacheKey(filename);
+        const cachePath = ensureThumbnailCacheDir();
+        const thumbnailPath = path.join(cachePath, `${cacheKey}.webp`);
+
+        if (fs.existsSync(thumbnailPath)) {
+          fs.unlinkSync(thumbnailPath);
+        }
+      } catch (thumbnailError) {
+        console.warn("Error deleting thumbnail:", thumbnailError);
+        // Continue even if thumbnail deletion fails
+      }
 
       console.log("Successfully deleted wallpaper:", filePath);
       return { success: true, path: filePath };
