@@ -266,6 +266,20 @@ function setupRainmeterHandlers() {
         // Create Rainmeter downloads folder if it doesn't exist
         if (!fs.existsSync(rainmeterSkinsPath)) {
           fs.mkdirSync(rainmeterSkinsPath, { recursive: true });
+
+          // Set hidden attribute on Windows
+          if (process.platform === "win32") {
+            try {
+              const { execSync } = require("child_process");
+              execSync(`attrib +h "${rainmeterSkinsPath}"`);
+              console.log("Set hidden attribute on Rainmeter Downloads folder");
+            } catch (error) {
+              console.error(
+                "Failed to set hidden attribute on Rainmeter Downloads folder:",
+                error
+              );
+            }
+          }
         }
 
         const filePath = path.join(rainmeterSkinsPath, filename);
