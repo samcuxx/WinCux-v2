@@ -12,7 +12,7 @@ export function HomePage() {
       <div className="text-center space-y-8 max-w-4xl mx-auto">
         <div className="space-y-4">
           <h1 className="text-6xl lg:text-7xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent leading-tight">
-            Desktop Pro
+            WinCux
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
             Transform your desktop with beautiful wallpapers and powerful

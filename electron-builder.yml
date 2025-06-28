@@ -3,15 +3,17 @@ productName: "Desktop Pro"
 copyright: "Copyright (c) 2025 SamCux"
 publish:
   provider: "github"
-  owner: "SamCux"
+  owner: "samcuxx"
   repo: "WinCux"
   private: false
   releaseType: "release"
   publishAutoUpdate: true
 win:
-  target: ["dir", "portable", "zip", "nsis"]
+  target: ["nsis", "portable"]
   icon: "resources/icon.ico"
   publisherName: "SamCux"
+  verifyUpdateCodeSignature: false
+  signAndEditExecutable: false
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
@@ -19,19 +21,12 @@ nsis:
   createStartMenuShortcut: true
   shortcutName: "Desktop Pro"
   artifactName: "${productName}-Setup-${version}.${ext}"
-linux:
-  target: ["dir", "appimage", "zip"]
-  icon: "resources/icon.png"
-  artifactName: "${productName}-${version}.${ext}"
-mac:
-  target: ["dir", "dmg", "zip"]
-  icon: "resources/icon.icns"
-  artifactName: "${productName}-${version}.${ext}"
+  uninstallDisplayName: "Desktop Pro"
+  deleteAppDataOnUninstall: true
 files:
   - "out/**/*"
   - "main/**/*"
   - "resources/**/*"
-  - "node_modules/**/*"
   - "package.json"
 directories:
   output: "dist"

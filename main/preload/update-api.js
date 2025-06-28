@@ -14,6 +14,11 @@ contextBridge.exposeInMainWorld("updateAPI", {
   // Get current update info
   getUpdateInfo: () => ipcRenderer.invoke("get-update-info"),
 
+  // Add new reminder-related methods
+  remindLater: () => ipcRenderer.invoke("remind-later"),
+  getReminderState: () => ipcRenderer.invoke("get-reminder-state"),
+  resetReminder: () => ipcRenderer.invoke("reset-reminder"),
+
   // Listen for update events
   onUpdateStatus: (callback) => {
     ipcRenderer.on("update-status", (event, data) => callback(data));

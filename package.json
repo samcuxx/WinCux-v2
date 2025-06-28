@@ -1,6 +1,6 @@
 {
   "name": "desktop-pro",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "main": "main/main.js",
   "author": "sample",
@@ -29,8 +29,9 @@
     "@types/react-window": "^1.8.8",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.0.0",
+    "electron-log": "^5.4.1",
     "electron-serve": "^1.2.0",
-    "electron-store": "^8.1.0",
+    "electron-store": "^8.2.0",
     "electron-updater": "^6.6.2",
     "lru-cache": "^11.1.0",
     "lucide-react": "^0.300.0",
