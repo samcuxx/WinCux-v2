@@ -7,6 +7,7 @@ const { setupWindowHandlers } = require("./handlers/window-handlers");
 const { setupWallpaperHandlers } = require("./handlers/wallpaper-handlers");
 const { setupRainmeterHandlers } = require("./handlers/rainmeter-handlers");
 const { setupWallhavenHandlers } = require("./handlers/wallhaven-handlers");
+const { setupUpdateHandlers } = require("./handlers/update-handlers");
 
 const appServe = app.isPackaged
   ? serve({
@@ -43,6 +44,7 @@ const createWindow = () => {
   setupWallpaperHandlers();
   setupRainmeterHandlers();
   setupWallhavenHandlers();
+  setupUpdateHandlers(win);
 
   if (app.isPackaged) {
     appServe(win).then(() => {

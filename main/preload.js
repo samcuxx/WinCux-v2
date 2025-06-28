@@ -74,6 +74,47 @@ const wallhavenAPI = {
   wallhavenTest: () => ipcRenderer.invoke("wallhaven-test"),
 };
 
+// Update API Module
+const updateAPI = {
+  // Check for updates
+  checkForUpdates: () => ipcRenderer.invoke("check-for-updates"),
+
+  // Download update
+  downloadUpdate: () => ipcRenderer.invoke("download-update"),
+
+  // Install update
+  installUpdate: () => ipcRenderer.invoke("install-update"),
+
+  // Get current update info
+  getUpdateInfo: () => ipcRenderer.invoke("get-update-info"),
+
+  // Listen for update events
+  onUpdateStatus: (callback) => {
+    ipcRenderer.on("update-status", (event, data) => callback(data));
+  },
+
+  onUpdateAvailable: (callback) => {
+    ipcRenderer.on("update-available", (event, data) => callback(data));
+  },
+
+  onUpdateProgress: (callback) => {
+    ipcRenderer.on("update-progress", (event, data) => callback(data));
+  },
+
+  onUpdateDownloaded: (callback) => {
+    ipcRenderer.on("update-downloaded", (event, data) => callback(data));
+  },
+
+  onUpdateError: (callback) => {
+    ipcRenderer.on("update-error", (event, data) => callback(data));
+  },
+
+  // Remove listeners
+  removeAllListeners: (channel) => {
+    ipcRenderer.removeAllListeners(channel);
+  },
+};
+
 // Expose the complete electronAPI
 contextBridge.exposeInMainWorld("electronAPI", {
   // General IPC communication
@@ -105,16 +146,19 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // Get local wallpaper
   getLocalWallpaper: (filename) => {
-    return ipcRenderer.invoke('get-local-wallpaper', { filename });
+    return ipcRenderer.invoke("get-local-wallpaper", { filename });
   },
-  
+
   // Get local wallpaper thumbnail
   getLocalWallpaperThumbnail: (filename) => {
-    return ipcRenderer.invoke('get-local-wallpaper-thumbnail', { filename });
+    return ipcRenderer.invoke("get-local-wallpaper-thumbnail", { filename });
   },
-  
+
   // Verify and regenerate thumbnails for all wallpapers
   verifyWallpaperThumbnails: () => {
-    return ipcRenderer.invoke('verify-wallpaper-thumbnails');
+    return ipcRenderer.invoke("verify-wallpaper-thumbnails");
   },
 });
+
+// Expose update API separately
+contextBridge.exposeInMainWorld("updateAPI", updateAPI);

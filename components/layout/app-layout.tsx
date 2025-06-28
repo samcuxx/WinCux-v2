@@ -4,6 +4,7 @@ import React from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sidebar } from "./sidebar";
 import { TopBar } from "./top-bar";
+import { GlobalUpdateNotification } from "@/components/ui/global-update-notification";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -28,6 +29,9 @@ export function AppLayout({ children, title }: AppLayoutProps) {
           </ScrollArea>
         </div>
       </div>
+
+      {/* Global Update Notification */}
+      <GlobalUpdateNotification />
     </div>
   );
 }

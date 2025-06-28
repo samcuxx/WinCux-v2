@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useSettings } from "@/lib/contexts/settings-context";
+import { UpdateSettings } from "@/components/ui/update-settings";
 import {
   Settings,
   Shield,
@@ -34,6 +35,19 @@ export function SettingsPage() {
     resetSettings,
   } = useSettings();
 
+  const [isClient, setIsClient] = useState(false);
+  const [cacheStats, setCacheStats] = useState({
+    totalEntries: 0,
+    totalSize: "0 MB",
+    isHealthy: true,
+    lastUpdate: null,
+  });
+
+  useEffect(() => {
+    setIsClient(true);
+    setCacheStats(getCacheStats());
+  }, [getCacheStats]);
+
   const handleResetSettings = () => {
     if (
       window.confirm(
@@ -46,11 +60,9 @@ export function SettingsPage() {
 
   const handleClearCache = () => {
     clearCache();
+    setCacheStats(getCacheStats());
     // Show a brief success message or notification if desired
   };
-
-  // Get cache stats from unified system
-  const cacheStats = getCacheStats();
 
   return (
     <div className="space-y-6">
@@ -193,76 +205,83 @@ export function SettingsPage() {
           </div>
 
           {/* Cache Statistics */}
-          <div className="p-4 rounded-lg bg-white/60 dark:bg-gray-900/60 border border-blue-200 dark:border-blue-700">
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="font-medium text-gray-900 dark:text-gray-100">
-                Cache Statistics
-              </h4>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleClearCache}
-                className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
-              >
-                Clear Cache
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <span className="text-gray-600 dark:text-gray-400">
-                  Entries:
-                </span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">
-                  {cacheStats.totalEntries}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-gray-600 dark:text-gray-400">Size:</span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">
-                  {cacheStats.totalSize}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <div
-                  className={`w-2 h-2 rounded-full ${
-                    cacheStats.isHealthy ? "bg-green-500" : "bg-red-500"
-                  }`}
-                ></div>
-                <span className="text-gray-600 dark:text-gray-400">
-                  Status:
-                </span>
-                <span
-                  className={`font-medium ${
-                    cacheStats.isHealthy ? "text-green-600" : "text-red-600"
-                  }`}
+          {isClient && (
+            <div className="p-4 rounded-lg bg-white/60 dark:bg-gray-900/60 border border-blue-200 dark:border-blue-700">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-medium text-gray-900 dark:text-gray-100">
+                  Cache Statistics
+                </h4>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleClearCache}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
                 >
-                  {cacheStats.isHealthy ? "Healthy" : "Needs Cleanup"}
-                </span>
+                  Clear Cache
+                </Button>
               </div>
 
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                <span className="text-gray-600 dark:text-gray-400">
-                  Last Update:
-                </span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">
-                  {cacheStats.lastUpdate
-                    ? new Intl.DateTimeFormat("en-US", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      }).format(cacheStats.lastUpdate)
-                    : "Never"}
-                </span>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <span className="text-gray-600 dark:text-gray-400">
+                    Entries:
+                  </span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">
+                    {cacheStats.totalEntries}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-gray-600 dark:text-gray-400">
+                    Size:
+                  </span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">
+                    {cacheStats.totalSize}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div
+                    className={`w-2 h-2 rounded-full ${
+                      cacheStats.isHealthy ? "bg-green-500" : "bg-red-500"
+                    }`}
+                  ></div>
+                  <span className="text-gray-600 dark:text-gray-400">
+                    Status:
+                  </span>
+                  <span
+                    className={`font-medium ${
+                      cacheStats.isHealthy ? "text-green-600" : "text-red-600"
+                    }`}
+                  >
+                    {cacheStats.isHealthy ? "Healthy" : "Needs Cleanup"}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                  <span className="text-gray-600 dark:text-gray-400">
+                    Last Update:
+                  </span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">
+                    {cacheStats.lastUpdate
+                      ? new Intl.DateTimeFormat("en-US", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        }).format(cacheStats.lastUpdate)
+                      : "Never"}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* Update Settings */}
+      <UpdateSettings />
 
       {/* About & Reset */}
       <Card className="border-gray-200 dark:border-gray-700">
