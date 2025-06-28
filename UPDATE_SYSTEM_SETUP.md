@@ -1,6 +1,6 @@
 # Auto-Update System Setup
 
-This document explains how to set up and use the automatic update system for Desktop Pro.
+This document explains how to set up and use the automatic update system for WinCux.
 
 ## Overview
 

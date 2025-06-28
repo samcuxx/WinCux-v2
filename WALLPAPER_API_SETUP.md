@@ -175,4 +175,4 @@ const searchResults = await wallhavenAPI.searchWallpapers({
 - Confirm Next.js is configured for static export
 - Check that all API logic is moved to main process
 
-This architecture provides a robust, secure, and performant foundation for the wallpaper system in Desktop Pro.
+This architecture provides a robust, secure, and performant foundation for the wallpaper system in WinCux.

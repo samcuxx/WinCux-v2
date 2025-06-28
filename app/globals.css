@@ -74,14 +74,39 @@
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
   }
-}
 
-@layer base {
   * {
     @apply border-border;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
   }
+
+  /* Allow text selection in specific elements */
+  .selectable-text {
+    -webkit-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+  }
+
+  /* Make code blocks selectable */
+  pre,
+  code {
+    -webkit-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+  }
+
+  /* Make form inputs selectable */
+  input,
+  textarea {
+    -webkit-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+  }
+
   body {
-    @apply text-foreground;
+    @apply text-foreground antialiased;
   }
 }
 

@@ -1,8 +1,8 @@
-# Desktop Pro - Architecture Documentation
+# WinCux - Architecture Documentation
 
 ## Overview
 
-Desktop Pro is a professional Windows 11-style desktop application built with Electron, Next.js, Tailwind CSS, and shadcn/ui. The application provides wallpaper management and Rainmeter integration with a modern, clean interface.
+WinCux is a professional Windows 11-style desktop application built with Electron, Next.js, Tailwind CSS, and shadcn/ui. The application provides wallpaper management and Rainmeter integration with a modern, clean interface.
 
 ## Project Structure
 

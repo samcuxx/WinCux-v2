@@ -220,7 +220,7 @@ if (!gotTheLock) {
         method: options.method || "GET",
         headers: {
           Accept: "application/json",
-          "User-Agent": "Desktop Pro/1.0.0",
+          "User-Agent": "WinCux/1.0.0",
           ...options.headers,
         },
       };

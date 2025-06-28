@@ -1,5 +1,5 @@
-appId: "app.samcux.desktoppro"
-productName: "Desktop Pro"
+appId: "app.samcux.WinCux"
+productName: "WinCux"
 copyright: "Copyright (c) 2025 SamCux"
 publish:
   provider: "github"
@@ -19,9 +19,9 @@ nsis:
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
-  shortcutName: "Desktop Pro"
+  shortcutName: "WinCux"
   artifactName: "${productName}-Setup-${version}.${ext}"
-  uninstallDisplayName: "Desktop Pro"
+  uninstallDisplayName: "WinCux"
   deleteAppDataOnUninstall: true
 files:
   - "out/**/*"
